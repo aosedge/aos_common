@@ -1,6 +1,6 @@
 # aos_common
 
-[![pipeline status](https://gitpct.epam.com/epmd-aepr/aos_common/badges/master/pipeline.svg)](https://gitpct.epam.com/epmd-aepr/aos_common/commits/master) [![coverage report](https://gitpct.epam.com/epmd-aepr/aos_common/badges/master/coverage.svg)](https://gitpct.epam.com/epmd-aepr/aos_common/commits/master)
+[![CI](https://github.com/aoscloud/aos_common/workflows/CI/badge.svg)](https://github.com/aoscloud/aos_common/actions?query=workflow%3ACI)
 
 Contains common aos packages.
 
