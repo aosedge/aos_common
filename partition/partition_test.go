@@ -27,8 +27,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"gitpct.epam.com/epmd-aepr/aos_common/partition"
-	"gitpct.epam.com/epmd-aepr/aos_common/utils/testtools"
+	"github.com/aoscloud/aos_common/partition"
+	"github.com/aoscloud/aos_common/utils/testtools"
 )
 
 /*******************************************************************************

@@ -1,4 +1,4 @@
-module gitpct.epam.com/epmd-aepr/aos_common
+module github.com/aoscloud/aos_common
 
 go 1.14
 

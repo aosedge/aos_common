@@ -32,9 +32,9 @@ import (
 	"path"
 	"testing"
 
-	"gitpct.epam.com/epmd-aepr/aos_common/aoserrors"
-	"gitpct.epam.com/epmd-aepr/aos_common/utils/cryptutils"
-	"gitpct.epam.com/epmd-aepr/aos_common/utils/testtools"
+	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/utils/cryptutils"
+	"github.com/aoscloud/aos_common/utils/testtools"
 )
 
 /*******************************************************************************
