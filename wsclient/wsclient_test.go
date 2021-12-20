@@ -27,9 +27,9 @@ import (
 	"github.com/gorilla/websocket"
 	log "github.com/sirupsen/logrus"
 
-	"gitpct.epam.com/epmd-aepr/aos_common/aoserrors"
-	"gitpct.epam.com/epmd-aepr/aos_common/wsclient"
-	"gitpct.epam.com/epmd-aepr/aos_common/wsserver"
+	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/wsclient"
+	"github.com/aoscloud/aos_common/wsserver"
 )
 
 /*******************************************************************************
