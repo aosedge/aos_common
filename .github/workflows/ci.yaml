@@ -24,6 +24,8 @@ jobs:
       - name: Test
         run: |
           sudo apt-get install -y libblkid-dev parted dosfstools
-          sudo env "PATH=$PATH" go test -v ./... -failfast -covermode=count -coverprofile=coverage.out
+          sudo env "PATH=$PATH" go test -v ./... -failfast -coverprofile=coverage.out -covermode=atomic
           sudo chmod 666 coverage.out
-          go tool cover -func=coverage.out -o=coverage.out
+
+      - name: Code coverage
+        run: bash <(curl -s https://codecov.io/bash)
