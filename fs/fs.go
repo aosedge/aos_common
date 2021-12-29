@@ -61,7 +61,7 @@ func Mount(device string, mountPoint string, fsType string, flags uintptr, opts 
 			log.Warningf("Mount error: %s, try remount...", err)
 
 			// Try to sync and force umount
-			syscall.Unmount(mountPoint, syscall.MNT_FORCE)
+			_ = syscall.Unmount(mountPoint, syscall.MNT_FORCE)
 		}); err != nil {
 		return aoserrors.Wrap(err)
 	}

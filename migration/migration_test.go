@@ -405,9 +405,11 @@ func writeToFile(path string, data string) (err error) {
 		return err
 	}
 
-	file.WriteString(data)
+	defer file.Close()
 
-	file.Close()
+	if _, err := file.WriteString(data); err != nil {
+		return aoserrors.Wrap(err)
+	}
 
 	return nil
 }

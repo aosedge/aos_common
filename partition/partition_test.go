@@ -70,8 +70,8 @@ func TestMain(m *testing.M) {
 	if disk, err = testtools.NewTestDisk(
 		path.Join(tmpDir, "testdisk.img"),
 		[]testtools.PartDesc{
-			testtools.PartDesc{Type: "vfat", Label: "efi", Size: 16},
-			testtools.PartDesc{Type: "ext4", Label: "platform", Size: 32},
+			{Type: "vfat", Label: "efi", Size: 16},
+			{Type: "ext4", Label: "platform", Size: 32},
 		}); err != nil {
 		log.Fatalf("Can't create test disk: %s", err)
 	}
@@ -160,6 +160,9 @@ func TestCopyPartition(t *testing.T) {
 	}
 
 	stat, err := os.Stat(filePartition)
+	if err != nil {
+		t.Fatalf("Can't stat file: %s", err)
+	}
 
 	if copied != stat.Size() {
 		t.Errorf("Wrong copied size: %d", copied)
@@ -186,6 +189,9 @@ func TestCopyPartitionLess(t *testing.T) {
 	}
 
 	stat, err := os.Stat(filePartition)
+	if err != nil {
+		t.Fatalf("Can't stat file: %s", err)
+	}
 
 	if copied != stat.Size() {
 		t.Errorf("Wrong copied size: %d", copied)
