@@ -60,7 +60,7 @@ func DoMigrate(sql *sql.DB, migrationPath string, migrateVersion uint) (err erro
 		return aoserrors.Wrap(err)
 	}
 
-	if dirty == true {
+	if dirty {
 		return aoserrors.New("can't update, db is dirty")
 	}
 

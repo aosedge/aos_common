@@ -47,11 +47,6 @@ const (
  * Types
  ******************************************************************************/
 
-// Handler image handler instance
-type Handler struct {
-	grab *grab.Client
-}
-
 // FileInfo file info
 type FileInfo struct {
 	Sha256 []byte
