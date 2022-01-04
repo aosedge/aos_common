@@ -24,11 +24,11 @@ import (
 	"github.com/aoscloud/aos_common/aoserrors"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Types
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// Handler action handler
+// Handler action handler.
 type Handler struct {
 	sync.Mutex
 
@@ -38,7 +38,7 @@ type Handler struct {
 	workQueue            *list.List
 }
 
-// Func action function type
+// Func action function type.
 type Func func(id string) (err error)
 
 type action struct {
@@ -47,11 +47,11 @@ type action struct {
 	channel  chan error
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Public
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// New creates new action handler
+// New creates new action handler.
 func New(maxConcurrentActions int) (handler *Handler) {
 	handler = &Handler{
 		maxConcurrentActions: maxConcurrentActions,
@@ -62,7 +62,7 @@ func New(maxConcurrentActions int) (handler *Handler) {
 	return handler
 }
 
-// Execute executes action
+// Execute executes action.
 func (handler *Handler) Execute(id string, doAction Func) (channel <-chan error) {
 	handler.Lock()
 	defer handler.Unlock()
@@ -84,14 +84,14 @@ func (handler *Handler) Execute(id string, doAction Func) (channel <-chan error)
 	return newAction.channel
 }
 
-// Wait waits all actions are executed
+// Wait waits all actions are executed.
 func (handler *Handler) Wait() {
 	handler.wg.Wait()
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Private
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func (handler *Handler) isIDInWorkQueue(id string) (result bool) {
 	for item := handler.workQueue.Front(); item != nil; item = item.Next() {
