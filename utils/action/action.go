@@ -75,7 +75,8 @@ func (handler *Handler) Execute(id string, doAction Func) (channel <-chan error)
 		channel:  make(chan error, 1),
 	}
 
-	if handler.isIDInWorkQueue(newAction.id) || handler.workQueue.Len() >= handler.maxConcurrentActions {
+	if handler.isIDInWorkQueue(newAction.id) ||
+		(handler.workQueue.Len() >= handler.maxConcurrentActions && handler.maxConcurrentActions != 0) {
 		handler.waitQueue.PushBack(newAction)
 	} else {
 		go handler.processAction(handler.workQueue.PushBack(newAction))
