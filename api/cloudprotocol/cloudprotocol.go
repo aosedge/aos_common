@@ -180,6 +180,8 @@ type DesiredStatus struct {
 // RequestServiceCrashLog request service crash log message.
 type RequestServiceCrashLog struct {
 	ServiceID string     `json:"serviceId"`
+	SubjectID string     `json:"subjectId,omitempty"`
+	Instance  uint64     `json:"instance,omitempty"`
 	LogID     string     `json:"logId"`
 	From      *time.Time `json:"from"`
 	Till      *time.Time `json:"till"`
@@ -188,6 +190,8 @@ type RequestServiceCrashLog struct {
 // RequestServiceLog request service log message.
 type RequestServiceLog struct {
 	ServiceID string     `json:"serviceId"`
+	SubjectID string     `json:"subjectId,omitempty"`
+	Instance  uint64     `json:"instance,omitempty"`
 	LogID     string     `json:"logId"`
 	From      *time.Time `json:"from"`
 	Till      *time.Time `json:"till"`
@@ -246,6 +250,8 @@ type DecryptDataStruct struct {
 // StateAcceptance state acceptance message.
 type StateAcceptance struct {
 	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
 	Checksum  string `json:"checksum"`
 	Result    string `json:"result"`
 	Reason    string `json:"reason"`
@@ -254,6 +260,8 @@ type StateAcceptance struct {
 // UpdateState state update message.
 type UpdateState struct {
 	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
 	Checksum  string `json:"stateChecksum"`
 	State     string `json:"state"`
 }
@@ -261,6 +269,8 @@ type UpdateState struct {
 // NewState new state structure.
 type NewState struct {
 	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
 	Checksum  string `json:"stateChecksum"`
 	State     string `json:"state"`
 }
@@ -268,6 +278,8 @@ type NewState struct {
 // StateRequest state request structure.
 type StateRequest struct {
 	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
 	Default   bool   `json:"default"`
 }
 
@@ -327,6 +339,8 @@ type GlobalMonitoringData struct {
 // ServiceMonitoringData monitoring data for service.
 type ServiceMonitoringData struct {
 	ServiceID  string `json:"serviceId"`
+	SubjectID  string `json:"subjectId"`
+	Instance   uint64 `json:"instance"`
 	RAM        uint64 `json:"ram"`
 	CPU        uint64 `json:"cpu"`
 	UsedDisk   uint64 `json:"usedDisk"`
@@ -352,10 +366,23 @@ type PushLog struct {
 
 // UnitStatus unit status structure.
 type UnitStatus struct {
-	BoardConfig []BoardConfigInfo `json:"boardConfig"`
-	Services    []ServiceInfo     `json:"services"`
-	Layers      []LayerInfo       `json:"layers,omitempty"`
-	Components  []ComponentInfo   `json:"components"`
+	BoardConfig  []BoardConfigInfo `json:"boardConfig"`
+	Services     []ServiceInfo     `json:"services"`
+	Layers       []LayerInfo       `json:"layers,omitempty"`
+	Components   []ComponentInfo   `json:"components"`
+	Instances    []InstanceInfo    `json:"instances"`
+	UnitSubjects []string          `json:"unitSubjects"`
+}
+
+// InstanceInfo service instances runtime status.
+type InstanceInfo struct {
+	ServiceID  string `json:"serviceId"`
+	AosVersion uint64 `json:"aosVersion"`
+	SubjectID  string `json:"subjectId"`
+	Instance   uint64 `json:"instance"`
+	State      string `json:"state"`
+	Error      string `json:"error,omitempty"`
+	ExitCode   uint64 `json:"exitCode,omitempty"`
 }
 
 // BoardConfigInfo board config information.
@@ -440,6 +467,13 @@ type ComponentInfoFromCloud struct {
 	DecryptDataStruct
 }
 
+// InstanceInfoFromCloud decrypted desired runtime info.
+type InstanceInfoFromCloud struct {
+	ServiceID    string `json:"serviceId"`
+	SubjectID    string `json:"subjectId"`
+	NumInstances uint64 `json:"numInstances"`
+}
+
 // TimeSlot time slot with start and finish time.
 type TimeSlot struct {
 	Start  aostypes.Time `json:"start"`
@@ -465,6 +499,7 @@ type DecodedDesiredStatus struct {
 	Layers            []LayerInfoFromCloud
 	Services          []ServiceInfoFromCloud
 	Components        []ComponentInfoFromCloud
+	Instances         []InstanceInfoFromCloud
 	FOTASchedule      ScheduleRule
 	SOTASchedule      ScheduleRule
 	CertificateChains []CertificateChain
@@ -538,7 +573,8 @@ type DecodedOverrideEnvVars struct {
 // OverrideEnvsFromCloud struct with envs and related service and user.
 type OverrideEnvsFromCloud struct {
 	ServiceID string       `json:"serviceId"`
-	SubjectID string       `json:"subjectId"`
+	SubjectID string       `json:"subjectId,omitempty"`
+	Instance  uint64       `json:"instance,omitempty"`
 	EnvVars   []EnvVarInfo `json:"envVars"`
 }
 
@@ -557,7 +593,8 @@ type OverrideEnvVarsStatus struct {
 // EnvVarInfoStatus struct with envs status and related service and user.
 type EnvVarInfoStatus struct {
 	ServiceID string         `json:"serviceId"`
-	SubjectID string         `json:"subjectId"`
+	SubjectID string         `json:"subjectId,omitempty"`
+	Instance  uint64         `json:"instance,omitempty"`
 	Statuses  []EnvVarStatus `json:"statuses"`
 }
 
