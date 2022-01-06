@@ -33,9 +33,11 @@ import (
  * Vars
  ******************************************************************************/
 
-var disk *testtools.TestDisk
-var mountPoint string
-var tmpDir string
+var (
+	disk       *testtools.TestDisk
+	mountPoint string
+	tmpDir     string
+)
 
 /*******************************************************************************
  * Init
@@ -45,7 +47,8 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: false,
 		TimestampFormat:  "2006-01-02 15:04:05.000",
-		FullTimestamp:    true})
+		FullTimestamp:    true,
+	})
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
 }
@@ -66,8 +69,8 @@ func TestMain(m *testing.M) {
 	if disk, err = testtools.NewTestDisk(
 		path.Join(tmpDir, "testdisk.img"),
 		[]testtools.PartDesc{
-			testtools.PartDesc{Type: "vfat", Label: "efi", Size: 16},
-			testtools.PartDesc{Type: "ext4", Label: "platform", Size: 32},
+			{Type: "vfat", Label: "efi", Size: 16},
+			{Type: "ext4", Label: "platform", Size: 32},
 		}); err != nil {
 		log.Fatalf("Can't create test disk: %s", err)
 	}
@@ -116,6 +119,8 @@ func TestMountAlreadyMounted(t *testing.T) {
  ******************************************************************************/
 
 func mountUmount(t *testing.T) {
+	t.Helper()
+
 	for _, part := range disk.Partitions {
 		if err := fs.Mount(part.Device, mountPoint, part.Type, 0, ""); err != nil {
 			t.Fatalf("Can't mount partition: %s", err)

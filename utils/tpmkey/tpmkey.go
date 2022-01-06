@@ -30,15 +30,15 @@ import (
 	"github.com/aoscloud/aos_common/aoserrors"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Consts
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Types
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// TPMKey TPM key instance
+// TPMKey TPM key instance.
 type TPMKey interface {
 	Password() (password string)
 	MakePersistent(persistentHandle tpmutil.Handle) (err error)
@@ -62,22 +62,23 @@ type eccKey struct {
 	tpmKey
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Vars
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-var supportedHash = map[crypto.Hash]tpm2.Algorithm{
+var supportedHash = map[crypto.Hash]tpm2.Algorithm{ // nolint:gochecknoglobals
 	crypto.SHA1:   tpm2.AlgSHA1,
 	crypto.SHA256: tpm2.AlgSHA256,
 	crypto.SHA384: tpm2.AlgSHA384,
 	crypto.SHA512: tpm2.AlgSHA512,
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Public
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// CreateFromPersistent creates key from persistent storage
+// CreateFromPersistent creates key from persistent storage.
+// nolint:ireturn // we return different key types
 func CreateFromPersistent(device io.ReadWriter, persistentHandle tpmutil.Handle) (key TPMKey, err error) {
 	tpmPublic, _, _, err := tpm2.ReadPublic(device, persistentHandle)
 	if err != nil {
@@ -96,7 +97,8 @@ func CreateFromPersistent(device io.ReadWriter, persistentHandle tpmutil.Handle)
 	})
 }
 
-// CreateFromBlobs creates key from blobs
+// CreateFromBlobs creates key from blobs.
+// nolint:ireturn // we return different key types
 func CreateFromBlobs(device io.ReadWriter, primaryHandle tpmutil.Handle,
 	password string, privateBlob, publicBlob []byte) (key TPMKey, err error) {
 	tpmPublic, err := tpm2.DecodePublic(publicBlob)
@@ -119,10 +121,11 @@ func CreateFromBlobs(device io.ReadWriter, primaryHandle tpmutil.Handle,
 	})
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Private
- ******************************************************************************/
-
+ **********************************************************************************************************************/
+//
+// nolint:ireturn // we return different key types
 func createNewKey(algorithm tpm2.Algorithm, tpmKey tpmKey) (key TPMKey, err error) {
 	switch algorithm {
 	case tpm2.AlgRSA:
@@ -145,6 +148,7 @@ func makePersistent(key *tpmKey, persistentHandle tpmutil.Handle) (err error) {
 	if err != nil {
 		return aoserrors.Wrap(err)
 	}
+
 	defer func() {
 		if flushErr := tpm2.FlushContext(key.device, keyHandle); flushErr != nil {
 			if err == nil {
@@ -184,6 +188,7 @@ func sign(key tpmKey, digest []byte, scheme tpm2.SigScheme) (signature []byte, e
 			key.publicBlob, key.privateBlob); err != nil {
 			return nil, aoserrors.Wrap(err)
 		}
+
 		defer func() {
 			if flushErr := tpm2.FlushContext(key.device, keyHandle); flushErr != nil {
 				if err == nil {
@@ -211,6 +216,7 @@ func sign(key tpmKey, digest []byte, scheme tpm2.SigScheme) (signature []byte, e
 		sigStruct := struct{ R, S *big.Int }{sig.ECC.R, sig.ECC.S}
 
 		signature, err = asn1.Marshal(sigStruct)
+
 		return signature, aoserrors.Wrap(err)
 
 	default:
@@ -226,6 +232,7 @@ func decryptRSA(key tpmKey, msg []byte, scheme tpm2.AsymScheme, label string) (p
 			key.publicBlob, key.privateBlob); err != nil {
 			return nil, aoserrors.Wrap(err)
 		}
+
 		defer func() {
 			if flushErr := tpm2.FlushContext(key.device, keyHandle); flushErr != nil {
 				if err == nil {
