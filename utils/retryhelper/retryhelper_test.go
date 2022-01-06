@@ -31,8 +31,10 @@ import (
  **********************************************************************************************************************/
 
 func TestRetryHelper(t *testing.T) {
-	const retryDelay = 1 * time.Second
-	const tolerance = 0.1
+	const (
+		retryDelay = 1 * time.Second
+		tolerance  = 0.1
+	)
 
 	// Success on first attempt
 
@@ -42,6 +44,7 @@ func TestRetryHelper(t *testing.T) {
 
 	testFunction := func() (err error) {
 		callCount++
+
 		timeStamps = append(timeStamps, time.Now())
 
 		if callCount-1 == successIndex {
@@ -108,11 +111,12 @@ func checkTimeStamps(timeStamps []time.Time, delay time.Duration, tolerance floa
 	for i := 1; i < len(timeStamps); i++ {
 		currentDelay := timeStamps[i].Sub(timeStamps[i-1])
 
-		if float64(currentDelay) < float64(delay)*(1.0-tolerance) || float64(currentDelay) > float64(delay)*(1.0+tolerance) {
+		if float64(currentDelay) < float64(delay)*(1.0-tolerance) ||
+			float64(currentDelay) > float64(delay)*(1.0+tolerance) {
 			return aoserrors.Errorf("wrong time stamp: %d", i)
 		}
 
-		delay = delay * 2
+		delay *= 2
 	}
 
 	return nil

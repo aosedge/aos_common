@@ -37,15 +37,15 @@ import (
 	"github.com/aoscloud/aos_common/utils/testtools"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Vars
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 var tmpDir string
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Main
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func TestMain(m *testing.M) {
 	var err error
@@ -64,9 +64,9 @@ func TestMain(m *testing.M) {
 	os.Exit(ret)
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Tests
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func TestGetCertPool(t *testing.T) {
 	fileName, err := savePEMFile(testtools.GetCACertificate())
@@ -86,7 +86,7 @@ func TestLoadKey(t *testing.T) {
 		err  error
 	}
 
-	var testPEMKeys = []privateKeyPEMTest{
+	testPEMKeys := []privateKeyPEMTest{
 		{
 			"RSA PRIVATE KEY (RSA 1024, success)",
 			// openssl genrsa 1024
@@ -194,8 +194,20 @@ func TestSaveKey(t *testing.T) {
 	}
 
 	testData := []saveKeyTest{
-		{"rsa", func() (key crypto.PrivateKey, err error) { return rsa.GenerateKey(rand.Reader, 2048) }},
-		{"ec", func() (key crypto.PrivateKey, err error) { return ecdsa.GenerateKey(elliptic.P384(), rand.Reader) }},
+		{"rsa", func() (key crypto.PrivateKey, err error) {
+			if key, err = rsa.GenerateKey(rand.Reader, 2048); err != nil {
+				return nil, aoserrors.Wrap(err)
+			}
+
+			return key, nil
+		}},
+		{"ec", func() (key crypto.PrivateKey, err error) {
+			if key, err = ecdsa.GenerateKey(elliptic.P384(), rand.Reader); err != nil {
+				return nil, aoserrors.Wrap(err)
+			}
+
+			return key, nil
+		}},
 	}
 
 	for i, test := range testData {
@@ -283,6 +295,7 @@ func TestGetTLSConfig(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Can't create TLS config dir: %s", err)
 	}
+
 	defer os.RemoveAll(tlsDir)
 
 	x509Cert, err := cryptutils.PEMToX509Cert(cert)
@@ -290,7 +303,8 @@ func TestGetTLSConfig(t *testing.T) {
 		t.Fatalf("Can't parse certificate: %s", err)
 	}
 
-	if err = ioutil.WriteFile(path.Join(tlsDir, "root."+cryptutils.PEMExt), testtools.GetCACertificate(), 0600); err != nil {
+	if err = ioutil.WriteFile(path.Join(tlsDir, "root."+cryptutils.PEMExt),
+		testtools.GetCACertificate(), 0o600); err != nil {
 		t.Fatalf("Can't save certificate: %s", err)
 	}
 
@@ -319,9 +333,9 @@ func TestGetTLSConfig(t *testing.T) {
 	}
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Private
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func savePEMFile(data []byte) (fileName string, err error) {
 	file, err := ioutil.TempFile(tmpDir, "*."+cryptutils.PEMExt)

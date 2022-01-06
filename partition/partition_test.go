@@ -18,7 +18,6 @@
 package partition_test
 
 import (
-	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -27,6 +26,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/partition"
 	"github.com/aoscloud/aos_common/utils/testtools"
 )
@@ -49,7 +49,8 @@ func init() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: false,
 		TimestampFormat:  "2006-01-02 15:04:05.000",
-		FullTimestamp:    true})
+		FullTimestamp:    true,
+	})
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
 }
@@ -296,7 +297,7 @@ func generatePartitionContent(mountPoint string) (err error) {
 	if output, err := exec.Command("dd",
 		"if=/dev/urandom", "of="+mountPoint+"/test.dat", "bs=1M",
 		"count=17").CombinedOutput(); err != nil {
-		return fmt.Errorf("%s (%s)", err, (string(output)))
+		return aoserrors.Errorf("%s (%s)", err, (string(output)))
 	}
 
 	return nil
