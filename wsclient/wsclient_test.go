@@ -32,19 +32,21 @@ import (
 	"github.com/aoscloud/aos_common/wsserver"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Consts
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-const hostURL = ":8088"
-const serverURL = "wss://localhost:8088"
-const crtFile = "../wsserver/data/crt.pem"
-const keyFile = "../wsserver/data/key.pem"
-const caCert = "../wsserver/data/rootCA.pem"
+const (
+	hostURL   = ":8088"
+	serverURL = "wss://localhost:8088"
+	crtFile   = "../wsserver/data/crt.pem"
+	keyFile   = "../wsserver/data/key.pem"
+	caCert    = "../wsserver/data/rootCA.pem"
+)
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Types
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 type processMessage func(client *wsserver.Client, messageType int, data []byte) (response []byte, err error)
 
@@ -52,37 +54,37 @@ type testHandler struct {
 	processMessage
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Vars
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Init
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func init() {
 	log.SetFormatter(&log.TextFormatter{
 		DisableTimestamp: false,
 		TimestampFormat:  "2006-01-02 15:04:05.000",
-		FullTimestamp:    true})
+		FullTimestamp:    true,
+	})
 	log.SetLevel(log.DebugLevel)
 	log.SetOutput(os.Stdout)
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Main
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func TestMain(m *testing.M) {
-
 	ret := m.Run()
 
 	os.Exit(ret)
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Tests
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func TestSendRequest(t *testing.T) {
 	type Header struct {
@@ -98,7 +100,7 @@ func TestSendRequest(t *testing.T) {
 	type Response struct {
 		Header Header
 		Value  float32
-		Error  *string `json:"Error,omitempty"`
+		Error  *string `json:"error,omitempty"`
 	}
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
@@ -107,7 +109,7 @@ func TestSendRequest(t *testing.T) {
 			var rsp Response
 
 			if err = json.Unmarshal(data, &req); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			rsp.Header.Type = req.Header.Type
@@ -163,7 +165,7 @@ func TestMultipleResponses(t *testing.T) {
 	type Response struct {
 		Header Header
 		Value  float32
-		Error  *string `json:"Error,omitempty"`
+		Error  *string `json:"error,omitempty"`
 	}
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
@@ -172,7 +174,7 @@ func TestMultipleResponses(t *testing.T) {
 			var rsp Response
 
 			if err = json.Unmarshal(data, &req); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			rsp.Header.Type = req.Header.Type
@@ -180,17 +182,17 @@ func TestMultipleResponses(t *testing.T) {
 			rsp.Value = float32(req.Value) / 10.0
 
 			if response, err = json.Marshal(rsp); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			if err = client.SendMessage(messageType, response); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			rsp.Header.RequestID = uuid.New().String()
 
 			if response, err = json.Marshal(rsp); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			return response, nil
@@ -239,7 +241,7 @@ func TestWrongIDRequest(t *testing.T) {
 		Type      string
 		RequestID string
 		Value     float32
-		Error     *string `json:"Error,omitempty"`
+		Error     *string `json:"error,omitempty"`
 	}
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
@@ -248,7 +250,7 @@ func TestWrongIDRequest(t *testing.T) {
 			var rsp Response
 
 			if err = json.Unmarshal(data, &req); err != nil {
-				return nil, err
+				return nil, aoserrors.Wrap(err)
 			}
 
 			rsp.Type = req.Type
@@ -259,7 +261,7 @@ func TestWrongIDRequest(t *testing.T) {
 				return
 			}
 
-			return response, err
+			return response, aoserrors.Wrap(err)
 		}))
 	if err != nil {
 		t.Fatalf("Can't create ws server: %s", err)
@@ -268,7 +270,9 @@ func TestWrongIDRequest(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 
-	client, err := wsclient.New("Test", wsclient.ClientParam{CaCertFile: caCert, WebSocketTimeout: 1 * time.Second}, nil)
+	client, err := wsclient.New("Test", wsclient.ClientParam{
+		CaCertFile: caCert, WebSocketTimeout: 1 * time.Second,
+	}, nil)
 	if err != nil {
 		t.Fatalf("Can't create ws client: %s", err)
 	}
@@ -336,6 +340,7 @@ func TestMessageHandler(t *testing.T) {
 
 		if err := json.Unmarshal(data, &message); err != nil {
 			t.Errorf("Parse message error: %s", err)
+
 			return
 		}
 
@@ -356,7 +361,8 @@ func TestMessageHandler(t *testing.T) {
 	}
 
 	for _, clientHandler := range clientHandlers {
-		if err = clientHandler.SendMessage(websocket.TextMessage, []byte(`{"Type":"NOTIFY", "Value": 123}`)); err != nil {
+		if err = clientHandler.SendMessage(websocket.TextMessage,
+			[]byte(`{"Type":"NOTIFY", "Value": 123}`)); err != nil {
 			t.Fatalf("Can't send message: %s", err)
 		}
 	}
@@ -396,6 +402,7 @@ func TestSendMessage(t *testing.T) {
 
 		if err := json.Unmarshal(data, &message); err != nil {
 			t.Errorf("Parse message error: %s", err)
+
 			return
 		}
 
@@ -407,7 +414,7 @@ func TestSendMessage(t *testing.T) {
 	defer client.Close()
 
 	// Send message to server before connect
-	if err := client.SendMessage(&Message{Type: "NOTIFY", Value: 123}); err == nil {
+	if err = client.SendMessage(&Message{Type: "NOTIFY", Value: 123}); err == nil {
 		t.Error("Expect error because client is not connected")
 	}
 
@@ -415,7 +422,7 @@ func TestSendMessage(t *testing.T) {
 		t.Fatalf("Can't connect to ws server: %s", err)
 	}
 
-	if err := client.SendMessage(&Message{Type: "NOTIFY", Value: 123}); err != nil {
+	if err = client.SendMessage(&Message{Type: "NOTIFY", Value: 123}); err != nil {
 		t.Errorf("Error sending message form client: %s", err)
 	}
 
@@ -527,7 +534,7 @@ func TestWSTimeout(t *testing.T) {
 		Value     int
 	}
 
-	var wsTimeoutData = []struct {
+	wsTimeoutData := []struct {
 		timeout    int
 		minTimeout int
 		maxTimeout int
@@ -546,7 +553,9 @@ func TestWSTimeout(t *testing.T) {
 	time.Sleep(1 * time.Second)
 
 	for _, value := range wsTimeoutData {
-		client, err := wsclient.New("Test", wsclient.ClientParam{CaCertFile: caCert, WebSocketTimeout: time.Duration(value.timeout) * time.Second}, nil)
+		client, err := wsclient.New("Test", wsclient.ClientParam{
+			CaCertFile: caCert, WebSocketTimeout: time.Duration(value.timeout) * time.Second,
+		}, nil)
 		if err != nil {
 			t.Fatalf("Can't create ws client: %s", err)
 		}
@@ -565,7 +574,8 @@ func TestWSTimeout(t *testing.T) {
 
 		timeReqFinish := time.Now()
 
-		if timeReqFinish.Sub(timeReqStart) > time.Duration(value.maxTimeout)*time.Second || timeReqFinish.Sub(timeReqStart) < time.Duration(value.minTimeout)*time.Second {
+		if timeReqFinish.Sub(timeReqStart) > time.Duration(value.maxTimeout)*time.Second ||
+			timeReqFinish.Sub(timeReqStart) < time.Duration(value.minTimeout)*time.Second {
 			t.Errorf("Timeout differs a lot from the expected one")
 		}
 	}
@@ -582,8 +592,10 @@ func newTestHandler(p processMessage) (handler *testHandler) {
 func (handler *testHandler) ClientConnected(client *wsserver.Client) {
 }
 
-func (handler *testHandler) ProcessMessage(client *wsserver.Client, messageType int, message []byte) (response []byte, err error) {
+func (handler *testHandler) ProcessMessage(
+	client *wsserver.Client, messageType int, message []byte) (response []byte, err error) {
 	response, err = handler.processMessage(client, messageType, message)
+
 	return response, aoserrors.Wrap(err)
 }
 

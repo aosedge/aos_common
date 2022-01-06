@@ -32,20 +32,20 @@ import (
 	"github.com/aoscloud/aos_common/utils/cryptutils"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Consts
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 const (
 	defaultWebsocketTimeout = 120 * time.Second
 	errorChannelSize        = 1
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Types
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// Client VIS client object
+// Client VIS client object.
 type Client struct {
 	ErrorChannel chan error
 
@@ -60,6 +60,12 @@ type Client struct {
 	clientParam       ClientParam
 }
 
+// ClientParam client parameters.
+type ClientParam struct {
+	CaCertFile       string
+	WebSocketTimeout time.Duration
+}
+
 type requestParam struct {
 	id         interface{}
 	idField    string
@@ -67,16 +73,11 @@ type requestParam struct {
 	rsp        interface{}
 }
 
-type ClientParam struct {
-	CaCertFile       string
-	WebSocketTimeout time.Duration
-}
-
-/*******************************************************************************
+/***********************************************************************************************************************
  * Public
- ******************************************************************************/
+ **********************************************************************************************************************/
 
-// New creates new ws client
+// New creates new ws client.
 func New(name string, clientParam ClientParam, messageHandler func([]byte)) (client *Client, err error) {
 	log.WithFields(log.Fields{"client": name}).Debug("New ws client")
 
@@ -85,14 +86,18 @@ func New(name string, clientParam ClientParam, messageHandler func([]byte)) (cli
 		messageHandler:    messageHandler,
 		ErrorChannel:      make(chan error, errorChannelSize),
 		disconnectChannel: make(chan bool),
-		clientParam:       clientParam}
+		clientParam:       clientParam,
+	}
 	// Check if system root certificate override is active and if so update tls config with custom CA
 	if len(clientParam.CaCertFile) > 0 {
 		if client.wsDialer.TLSClientConfig, err = cryptutils.GetClientTLSConfig(clientParam.CaCertFile); err != nil {
 			return client, aoserrors.Wrap(err)
 		}
 
-		log.WithFields(log.Fields{"client": client.name, "caCert": clientParam.CaCertFile}).Debug("Updating TLS config based on caCert")
+		log.WithFields(log.Fields{
+			"client": client.name,
+			"caCert": clientParam.CaCertFile,
+		}).Debug("Updating TLS config based on caCert")
 	}
 
 	if clientParam.WebSocketTimeout > 0 {
@@ -104,12 +109,16 @@ func New(name string, clientParam ClientParam, messageHandler func([]byte)) (cli
 	return client, nil
 }
 
-// Connect connects to ws server
+// Connect connects to ws server.
 func (client *Client) Connect(url string) (err error) {
 	client.Lock()
 	defer client.Unlock()
 
-	log.WithFields(log.Fields{"client": client.name, "url": url, "wsTimeout": client.clientParam.WebSocketTimeout}).Debug("Connect to server")
+	log.WithFields(log.Fields{
+		"client":    client.name,
+		"url":       url,
+		"wsTimeout": client.clientParam.WebSocketTimeout,
+	}).Debug("Connect to server")
 
 	if client.isConnected {
 		return aoserrors.Errorf("client %s already connected", client.name)
@@ -129,12 +138,13 @@ func (client *Client) Connect(url string) (err error) {
 	return nil
 }
 
-// Disconnect disconnects from ws server
+// Disconnect disconnects from ws server.
 func (client *Client) Disconnect() (err error) {
 	client.Lock()
 
 	if !client.isConnected {
 		client.Unlock()
+
 		return nil
 	}
 
@@ -170,12 +180,12 @@ func (client *Client) Disconnect() (err error) {
 	return aoserrors.Wrap(err)
 }
 
-// GenerateRequestID generates unique request ID
+// GenerateRequestID generates unique request ID.
 func GenerateRequestID() (requestID string) {
 	return uuid.New().String()
 }
 
-// IsConnected returns true if connected to ws server
+// IsConnected returns true if connected to ws server.
 func (client *Client) IsConnected() (result bool) {
 	client.Lock()
 	defer client.Unlock()
@@ -183,16 +193,20 @@ func (client *Client) IsConnected() (result bool) {
 	return client.isConnected
 }
 
-// Close closes ws client
+// Close closes ws client.
 func (client *Client) Close() (err error) {
 	log.WithFields(log.Fields{"client": client.name}).Info("Close ws client")
 
 	return aoserrors.Wrap(client.Disconnect())
 }
 
-// SendRequest sends request and waits for response
+// SendRequest sends request and waits for response.
 func (client *Client) SendRequest(idField string, idValue interface{}, req interface{}, rsp interface{}) (err error) {
 	requestID := reflect.ValueOf(req).Elem()
+
+	if requestID.Kind() == reflect.Ptr {
+		requestID = requestID.Elem()
+	}
 
 	for _, field := range strings.Split(idField, ".") {
 		requestID = requestID.FieldByName(field)
@@ -201,12 +215,9 @@ func (client *Client) SendRequest(idField string, idValue interface{}, req inter
 		}
 	}
 
-	if requestID.Kind() == reflect.Ptr {
-		requestID = requestID.Elem()
-	}
-
 	param := requestParam{id: idValue, idField: idField, rspChannel: make(chan bool), rsp: rsp}
 	client.requests.Store(param.id, param)
+
 	defer client.requests.Delete(param.id)
 
 	if err = client.SendMessage(req); err != nil {
@@ -227,7 +238,7 @@ func (client *Client) SendRequest(idField string, idValue interface{}, req inter
 	return nil
 }
 
-// SendMessage sends message without waiting for response
+// SendMessage sends message without waiting for response.
 func (client *Client) SendMessage(message interface{}) (err error) {
 	client.Lock()
 	defer client.Unlock()
@@ -254,15 +265,16 @@ func (client *Client) SendMessage(message interface{}) (err error) {
 	if err = client.connection.WriteMessage(websocket.TextMessage, messageJSON); err != nil {
 		log.WithFields(log.Fields{"client": client.name}).Debugf("Send message error: %s", err)
 		client.connection.Close()
+
 		return aoserrors.Wrap(err)
 	}
 
 	return nil
 }
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Private
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 func (client *Client) processMessages() {
 	for {
@@ -273,60 +285,74 @@ func (client *Client) processMessages() {
 				log.WithFields(log.Fields{"client": client.name}).Errorf("Receive message error: %s", err)
 			}
 
-			client.Lock()
-			defer client.Unlock()
-
-			if client.isConnected {
-				log.WithFields(log.Fields{"client": client.name}).Debug("Remote disconnect")
-
-				client.connection.Close()
-				client.isConnected = false
-
-				client.ErrorChannel <- err
-			} else {
-				client.disconnectChannel <- true
-			}
+			client.disconnect(err)
 
 			return
 		}
 
 		log.WithFields(log.Fields{"client": client.name, "message": string(message)}).Debug("Receive message")
 
-		rspFound := false
+		if client.findRequestID(message) {
+			return
+		}
 
-		client.requests.Range(func(key, value interface{}) bool {
-			param := value.(requestParam)
-
-			if err := json.Unmarshal(message, param.rsp); err != nil {
-				return true
-			}
-
-			requestID := reflect.ValueOf(param.rsp).Elem()
-
-			for _, field := range strings.Split(param.idField, ".") {
-				requestID = requestID.FieldByName(field)
-				if !requestID.IsValid() {
-					return true
-				}
-			}
-
-			if requestID.Kind() == reflect.Ptr {
-				requestID = requestID.Elem()
-			}
-
-			if key == requestID.Interface() {
-				client.requests.Delete(param.id)
-
-				param.rspChannel <- true
-				rspFound = true
-				return false
-			}
-
-			return true
-		})
-
-		if !rspFound && client.messageHandler != nil {
+		if client.messageHandler != nil {
 			client.messageHandler(message)
 		}
+	}
+}
+
+func (client *Client) findRequestID(message []byte) (found bool) {
+	client.requests.Range(func(key, value interface{}) bool {
+		param, ok := value.(requestParam)
+		if !ok {
+			return true
+		}
+
+		if err := json.Unmarshal(message, param.rsp); err != nil {
+			return true
+		}
+
+		requestID := reflect.ValueOf(param.rsp).Elem()
+
+		for _, field := range strings.Split(param.idField, ".") {
+			requestID = requestID.FieldByName(field)
+			if !requestID.IsValid() {
+				return true
+			}
+		}
+
+		if requestID.Kind() == reflect.Ptr {
+			requestID = requestID.Elem()
+		}
+
+		if key == requestID.Interface() {
+			client.requests.Delete(param.id)
+
+			param.rspChannel <- true
+			found = true
+
+			return false
+		}
+
+		return true
+	})
+
+	return found
+}
+
+func (client *Client) disconnect(err error) {
+	client.Lock()
+	defer client.Unlock()
+
+	if client.isConnected {
+		log.WithFields(log.Fields{"client": client.name}).Debug("Remote disconnect")
+
+		client.connection.Close()
+		client.isConnected = false
+
+		client.ErrorChannel <- err
+	} else {
+		client.disconnectChannel <- true
 	}
 }
