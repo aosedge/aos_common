@@ -366,16 +366,16 @@ type PushLog struct {
 
 // UnitStatus unit status structure.
 type UnitStatus struct {
-	BoardConfig  []BoardConfigInfo `json:"boardConfig"`
-	Services     []ServiceInfo     `json:"services"`
-	Layers       []LayerInfo       `json:"layers,omitempty"`
-	Components   []ComponentInfo   `json:"components"`
-	Instances    []InstanceInfo    `json:"instances"`
-	UnitSubjects []string          `json:"unitSubjects"`
+	BoardConfig  []BoardConfigStatus `json:"boardConfig"`
+	Services     []ServiceStatus     `json:"services"`
+	Layers       []LayerStatus       `json:"layers,omitempty"`
+	Components   []ComponentStatus   `json:"components"`
+	Instances    []InstanceStatus    `json:"instances"`
+	UnitSubjects []string            `json:"unitSubjects"`
 }
 
-// InstanceInfo service instances runtime status.
-type InstanceInfo struct {
+// InstanceStatus service instance runtime status.
+type InstanceStatus struct {
 	ServiceID  string `json:"serviceId"`
 	AosVersion uint64 `json:"aosVersion"`
 	SubjectID  string `json:"subjectId"`
@@ -385,15 +385,15 @@ type InstanceInfo struct {
 	ExitCode   uint64 `json:"exitCode,omitempty"`
 }
 
-// BoardConfigInfo board config information.
-type BoardConfigInfo struct {
+// BoardConfigStatus board config status.
+type BoardConfigStatus struct {
 	VendorVersion string `json:"vendorVersion"`
 	Status        string `json:"status"`
 	Error         string `json:"error,omitempty"`
 }
 
-// ServiceInfo struct with service information.
-type ServiceInfo struct {
+// ServiceStatus service status.
+type ServiceStatus struct {
 	ID            string `json:"id"`
 	AosVersion    uint64 `json:"aosVersion"`
 	Status        string `json:"status"`
@@ -401,8 +401,8 @@ type ServiceInfo struct {
 	StateChecksum string `json:"stateChecksum,omitempty"`
 }
 
-// LayerInfo struct with layer info and status.
-type LayerInfo struct {
+// LayerStatus layer status.
+type LayerStatus struct {
 	ID         string `json:"id"`
 	AosVersion uint64 `json:"aosVersion"`
 	Digest     string `json:"digest"`
@@ -410,8 +410,8 @@ type LayerInfo struct {
 	Error      string `json:"error,omitempty"`
 }
 
-// ComponentInfo struct with system component info and status.
-type ComponentInfo struct {
+// ComponentStatus component status.
+type ComponentStatus struct {
 	ID            string `json:"id"`
 	AosVersion    uint64 `json:"aosVersion"`
 	VendorVersion string `json:"vendorVersion"`
@@ -435,40 +435,40 @@ type ServiceAlertRules struct {
 	OutTraffic *AlertRule `json:"outTraffic,omitempty"`
 }
 
-// VersionFromCloud common version structure.
-type VersionFromCloud struct {
+// VersionInfo common version structure.
+type VersionInfo struct {
 	AosVersion    uint64 `json:"aosVersion"`
 	VendorVersion string `json:"vendorVersion"`
 	Description   string `json:"description"`
 }
 
-// ServiceInfoFromCloud decrypted service info.
-type ServiceInfoFromCloud struct {
-	ID         string `json:"id"`
-	ProviderID string `json:"providerId"`
-	VersionFromCloud
+// ServiceInfo decrypted service info.
+type ServiceInfo struct {
+	VersionInfo
+	ID         string             `json:"id"`
+	ProviderID string             `json:"providerId"`
 	AlertRules *ServiceAlertRules `json:"alertRules,omitempty"`
 	DecryptDataStruct
 }
 
-// LayerInfoFromCloud decrypted layer info.
-type LayerInfoFromCloud struct {
+// LayerInfo decrypted layer info.
+type LayerInfo struct {
+	VersionInfo
 	ID     string `json:"id"`
 	Digest string `json:"digest"`
-	VersionFromCloud
 	DecryptDataStruct
 }
 
-// ComponentInfoFromCloud decrypted component info.
-type ComponentInfoFromCloud struct {
+// ComponentInfo decrypted component info.
+type ComponentInfo struct {
+	VersionInfo
 	ID          string          `json:"id"`
 	Annotations json.RawMessage `json:"annotations,omitempty"`
-	VersionFromCloud
 	DecryptDataStruct
 }
 
-// InstanceInfoFromCloud decrypted desired runtime info.
-type InstanceInfoFromCloud struct {
+// InstanceInfo decrypted desired instance runtime info.
+type InstanceInfo struct {
 	ServiceID    string `json:"serviceId"`
 	SubjectID    string `json:"subjectId"`
 	NumInstances uint64 `json:"numInstances"`
@@ -496,10 +496,10 @@ type ScheduleRule struct {
 // DecodedDesiredStatus decoded desired status.
 type DecodedDesiredStatus struct {
 	BoardConfig       json.RawMessage
-	Layers            []LayerInfoFromCloud
-	Services          []ServiceInfoFromCloud
-	Components        []ComponentInfoFromCloud
-	Instances         []InstanceInfoFromCloud
+	Layers            []LayerInfo
+	Services          []ServiceInfo
+	Components        []ComponentInfo
+	Instances         []InstanceInfo
 	FOTASchedule      ScheduleRule
 	SOTASchedule      ScheduleRule
 	CertificateChains []CertificateChain
@@ -567,11 +567,11 @@ type OverrideEnvVars struct {
 
 // DecodedOverrideEnvVars decoded service environment variables.
 type DecodedOverrideEnvVars struct {
-	OverrideEnvVars []OverrideEnvsFromCloud `json:"overrideEnvVars"`
+	OverrideEnvVars []EnvVarsInstanceInfo `json:"overrideEnvVars"`
 }
 
-// OverrideEnvsFromCloud struct with envs and related service and user.
-type OverrideEnvsFromCloud struct {
+// EnvVarsInstanceInfo struct with envs and related service and user.
+type EnvVarsInstanceInfo struct {
 	ServiceID string       `json:"serviceId"`
 	SubjectID string       `json:"subjectId,omitempty"`
 	Instance  uint64       `json:"instance,omitempty"`
@@ -587,11 +587,11 @@ type EnvVarInfo struct {
 
 // OverrideEnvVarsStatus override env status.
 type OverrideEnvVarsStatus struct {
-	OverrideEnvVarsStatus []EnvVarInfoStatus `json:"overrideEnvVarsStatus"`
+	OverrideEnvVarsStatus []EnvVarsInstanceStatus `json:"overrideEnvVarsStatus"`
 }
 
-// EnvVarInfoStatus struct with envs status and related service and user.
-type EnvVarInfoStatus struct {
+// EnvVarsInstanceStatus struct with envs status and related service and user.
+type EnvVarsInstanceStatus struct {
 	ServiceID string         `json:"serviceId"`
 	SubjectID string         `json:"subjectId,omitempty"`
 	Instance  uint64         `json:"instance,omitempty"`
@@ -616,17 +616,17 @@ type UnitSecret struct {
  * Public
  **********************************************************************************************************************/
 
-func (service ServiceInfoFromCloud) String() string {
+func (service ServiceInfo) String() string {
 	return fmt.Sprintf("{id: %s, vendorVersion: %s aosVersion: %d, description: %s}",
 		service.ID, service.VendorVersion, service.AosVersion, service.Description)
 }
 
-func (layer LayerInfoFromCloud) String() string {
+func (layer LayerInfo) String() string {
 	return fmt.Sprintf("{id: %s, digest: %s, vendorVersion: %s aosVersion: %d, description: %s}",
 		layer.ID, layer.Digest, layer.VendorVersion, layer.AosVersion, layer.Description)
 }
 
-func (component ComponentInfoFromCloud) String() string {
+func (component ComponentInfo) String() string {
 	return fmt.Sprintf("{id: %s, annotations: %s, vendorVersion: %s aosVersion: %d, description: %s}",
 		component.ID, component.Annotations, component.VendorVersion, component.AosVersion, component.Description)
 }
