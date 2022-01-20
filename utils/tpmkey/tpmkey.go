@@ -20,6 +20,7 @@ package tpmkey
 import (
 	"crypto"
 	"encoding/asn1"
+	"errors"
 	"io"
 	"math/big"
 
@@ -153,8 +154,17 @@ func makePersistent(key *tpmKey, persistentHandle tpmutil.Handle) (err error) {
 	}()
 
 	// Clear slot
-	if err = tpm2.EvictControl(key.device, key.password, tpm2.HandleOwner, persistentHandle, persistentHandle); err != nil {
-		return aoserrors.Wrap(err)
+	if err = tpm2.EvictControl(
+		key.device, key.password, tpm2.HandleOwner, persistentHandle, persistentHandle); err != nil {
+		var tpmError tpm2.HandleError
+
+		if !errors.As(err, &tpmError) {
+			return aoserrors.Wrap(err)
+		}
+
+		if tpmError.Code != tpm2.RCHandle {
+			return aoserrors.Wrap(err)
+		}
 	}
 
 	if err = tpm2.EvictControl(key.device, key.password, tpm2.HandleOwner, keyHandle, persistentHandle); err != nil {
