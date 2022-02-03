@@ -451,22 +451,6 @@ type ComponentStatus struct {
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
-// AlertRule describes alert rule.
-type AlertRule struct {
-	MinTimeout   aostypes.Duration `json:"minTimeout"`
-	MinThreshold uint64            `json:"minThreshold"`
-	MaxThreshold uint64            `json:"maxThreshold"`
-}
-
-// ServiceAlertRules define service monitoring alerts rules.
-type ServiceAlertRules struct {
-	RAM        *AlertRule `json:"ram,omitempty"`
-	CPU        *AlertRule `json:"cpu,omitempty"`
-	UsedDisk   *AlertRule `json:"usedDisk,omitempty"`
-	InTraffic  *AlertRule `json:"inTraffic,omitempty"`
-	OutTraffic *AlertRule `json:"outTraffic,omitempty"`
-}
-
 // VersionInfo common version structure.
 type VersionInfo struct {
 	AosVersion    uint64 `json:"aosVersion"`
@@ -477,9 +461,8 @@ type VersionInfo struct {
 // ServiceInfo decrypted service info.
 type ServiceInfo struct {
 	VersionInfo
-	ID         string             `json:"id"`
-	ProviderID string             `json:"providerId"`
-	AlertRules *ServiceAlertRules `json:"alertRules,omitempty"`
+	ID         string `json:"id"`
+	ProviderID string `json:"providerId"`
 	DecryptDataStruct
 }
 
