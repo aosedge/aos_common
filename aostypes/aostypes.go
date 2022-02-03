@@ -40,6 +40,22 @@ type Time struct {
 	time.Time
 }
 
+// AlertRule describes alert rule.
+type AlertRule struct {
+	MinTimeout   Duration `json:"minTimeout"`
+	MinThreshold uint64   `json:"minThreshold"`
+	MaxThreshold uint64   `json:"maxThreshold"`
+}
+
+// ServiceAlertRules define service monitoring alerts rules.
+type ServiceAlertRules struct {
+	RAM        *AlertRule `json:"ram,omitempty"`
+	CPU        *AlertRule `json:"cpu,omitempty"`
+	UsedDisk   *AlertRule `json:"usedDisk,omitempty"`
+	InTraffic  *AlertRule `json:"inTraffic,omitempty"`
+	OutTraffic *AlertRule `json:"outTraffic,omitempty"`
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/
