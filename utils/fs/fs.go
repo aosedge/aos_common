@@ -20,6 +20,7 @@ package fs
 import (
 	"context"
 	"os"
+	"strings"
 	"syscall"
 	"time"
 
@@ -63,6 +64,33 @@ func Mount(source string, mountPoint string, fsType string, flags uintptr, opts 
 
 		forceUmount(mountPoint)
 	}, retryCount, retryDelay, 0); err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	return nil
+}
+
+// OverlayMount creates mount point and mount overlay FS to it.
+func OverlayMount(mountPoint string, lowerDirs []string, workDir, upperDir string) error {
+	opts := "lowerdir=" + strings.Join(lowerDirs, ":")
+
+	if upperDir != "" {
+		if workDir == "" {
+			return aoserrors.New("working dir path should be set")
+		}
+
+		if err := os.RemoveAll(workDir); err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		if err := os.MkdirAll(workDir, 0o755); err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		opts = opts + ",workdir=" + workDir + ",upperdir=" + upperDir
+	}
+
+	if err := Mount("overlay", mountPoint, "overlay", 0, opts); err != nil {
 		return aoserrors.Wrap(err)
 	}
 
