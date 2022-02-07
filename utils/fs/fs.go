@@ -18,19 +18,20 @@
 package fs
 
 import (
+	"context"
 	"os"
-	"os/exec"
 	"syscall"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/utils/retryhelper"
 )
 
-/*******************************************************************************
+/***********************************************************************************************************************
  * Consts
- ******************************************************************************/
+ **********************************************************************************************************************/
 
 const (
 	retryCount = 3
@@ -47,24 +48,21 @@ const folderPerm = 0o755
  * Public
  **********************************************************************************************************************/
 
-// Mount creates mount point and mount device to it.
-func Mount(device string, mountPoint string, fsType string, flags uintptr, opts string) (err error) {
-	log.WithFields(log.Fields{"device": device, "type": fsType, "mountPoint": mountPoint}).Debug("Mount partition")
+// Mount creates mount point and mount source to it.
+func Mount(source string, mountPoint string, fsType string, flags uintptr, opts string) error {
+	log.WithFields(log.Fields{"source": source, "type": fsType, "mountPoint": mountPoint}).Debug("Mount dir")
 
-	if err = os.MkdirAll(mountPoint, folderPerm); err != nil {
+	if err := os.MkdirAll(mountPoint, folderPerm); err != nil {
 		return aoserrors.Wrap(err)
 	}
 
-	if err = retry(
-		func() error {
-			return aoserrors.Wrap(syscall.Mount(device, mountPoint, fsType, flags, opts))
-		},
-		func(err error) {
-			log.Warningf("Mount error: %s, try remount...", err)
+	if err := retryhelper.Retry(context.Background(), func() error {
+		return aoserrors.Wrap(syscall.Mount(source, mountPoint, fsType, flags, opts))
+	}, func(retryCount int, delay time.Duration, err error) {
+		log.Warningf("Mount error: %s, try remount...", err)
 
-			// Try to sync and force umount
-			_ = syscall.Unmount(mountPoint, syscall.MNT_FORCE)
-		}); err != nil {
+		forceUmount(mountPoint)
+	}, retryCount, retryDelay, 0); err != nil {
 		return aoserrors.Wrap(err)
 	}
 
@@ -73,7 +71,7 @@ func Mount(device string, mountPoint string, fsType string, flags uintptr, opts 
 
 // Umount umount mount point and remove it.
 func Umount(mountPoint string) (err error) {
-	log.WithFields(log.Fields{"mountPoint": mountPoint}).Debug("Umount partition")
+	log.WithFields(log.Fields{"mountPoint": mountPoint}).Debug("Umount dir")
 
 	defer func() {
 		if removeErr := os.RemoveAll(mountPoint); removeErr != nil {
@@ -85,30 +83,15 @@ func Umount(mountPoint string) (err error) {
 		}
 	}()
 
-	if err = retry(
-		func() error {
-			syscall.Sync()
+	if err = retryhelper.Retry(context.Background(), func() error {
+		syscall.Sync()
 
-			return aoserrors.Wrap(syscall.Unmount(mountPoint, 0))
-		},
-		func(err error) {
-			log.Warningf("Umount error: %s, retry...", err)
+		return aoserrors.Wrap(syscall.Unmount(mountPoint, 0))
+	}, func(retryCount int, delay time.Duration, err error) {
+		log.Warningf("Unmount error: %s, retry...", err)
 
-			time.Sleep(retryDelay)
-
-			// Try to sync and force umount
-			syscall.Sync()
-		}); err != nil {
-		log.Warningf("Can't umount for: %s", mountPoint)
-
-		if output, err := exec.Command("lsof", mountPoint).CombinedOutput(); err == nil {
-			log.Debugf("lsof says: %s", string(output))
-		}
-
-		if output, err := exec.Command("fuser", "-cu", mountPoint).CombinedOutput(); err == nil {
-			log.Debugf("fuser says: %s", string(output))
-		}
-
+		forceUmount(mountPoint)
+	}, retryCount, retryDelay, 0); err != nil {
 		return aoserrors.Wrap(err)
 	}
 
@@ -119,22 +102,7 @@ func Umount(mountPoint string) (err error) {
  * Private
  **********************************************************************************************************************/
 
-func retry(caller func() error, restorer func(error)) (err error) {
-	i := 0
-
-	for {
-		if err = caller(); err == nil {
-			return nil
-		}
-
-		if i >= retryCount {
-			return aoserrors.Wrap(err)
-		}
-
-		if restorer != nil {
-			restorer(err)
-		}
-
-		i++
-	}
+func forceUmount(mountPoint string) {
+	syscall.Sync()
+	_ = syscall.Unmount(mountPoint, syscall.MNT_FORCE)
 }
