@@ -21,10 +21,12 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/utils/fs"
 	"github.com/aoscloud/aos_common/utils/testtools"
 )
@@ -114,6 +116,70 @@ func TestMountAlreadyMounted(t *testing.T) {
 	}
 }
 
+func TestOverlayMount(t *testing.T) {
+	content := []string{"file0", "file1", "file2", "file3", "file4", "file5", "file6"}
+	lowerDirs := []string{
+		filepath.Join(tmpDir, "lower0"), filepath.Join(tmpDir, "lower1"),
+		filepath.Join(tmpDir, "lower2"),
+	}
+
+	// Create content
+
+	if err := createDirContent(lowerDirs[0], content[:2]); err != nil {
+		t.Fatalf("Can't create lower dir content: %s", err)
+	}
+
+	if err := createDirContent(lowerDirs[1], content[2:4]); err != nil {
+		t.Fatalf("Can't create lower dir content: %s", err)
+	}
+
+	if err := createDirContent(lowerDirs[2], content[4:]); err != nil {
+		t.Fatalf("Can't create lower dir content: %s", err)
+	}
+
+	workDir := filepath.Join(tmpDir, "workDir")
+
+	if err := os.MkdirAll(workDir, 0o755); err != nil {
+		t.Fatalf("Can't create work dir: %s", err)
+	}
+
+	upperDir := filepath.Join(tmpDir, "upperDir")
+
+	if err := os.MkdirAll(upperDir, 0o755); err != nil {
+		t.Fatalf("Can't create upper dir: %s", err)
+	}
+
+	// Overlay mount
+
+	if err := fs.OverlayMount(mountPoint, lowerDirs, workDir, upperDir); err != nil {
+		t.Fatalf("Can't mount overlay dir: %s", err)
+	}
+
+	// Check content
+
+	if err := checkContent(mountPoint, content); err != nil {
+		t.Errorf("Overlay content mismatch: %s", err)
+	}
+
+	// Write some file
+
+	newContent := []string{"newFile0", "newFile1", "newFile2"}
+
+	if err := createDirContent(mountPoint, newContent); err != nil {
+		t.Fatalf("Can't create new content: %s", err)
+	}
+
+	if err := fs.Umount(mountPoint); err != nil {
+		t.Errorf("Can't unmount overlay dir: %s", err)
+	}
+
+	// New content should be in upper dir
+
+	if err := checkContent(upperDir, newContent); err != nil {
+		t.Errorf("Upper dir content mismatch: %s", err)
+	}
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -130,4 +196,51 @@ func mountUmount(t *testing.T) {
 			t.Fatalf("Can't umount partition: %s", err)
 		}
 	}
+}
+
+func createDirContent(path string, content []string) error {
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	for _, fileName := range content {
+		file, err := os.Create(filepath.Join(path, fileName))
+		if err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		file.Close()
+	}
+
+	return nil
+}
+
+func checkContent(path string, content []string) error {
+	file, err := os.Open(path)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	dirContent, err := file.Readdir(0)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	if len(dirContent) != len(content) {
+		return aoserrors.Errorf("wrong files count: %d", len(dirContent))
+	}
+
+contentLoop:
+	for _, fileName := range content {
+		for _, item := range dirContent {
+			if fileName == item.Name() {
+				continue contentLoop
+			}
+		}
+
+		return aoserrors.Errorf("file %s not found", fileName)
+	}
+
+	return nil
 }
