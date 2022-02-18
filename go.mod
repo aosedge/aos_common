@@ -2,7 +2,10 @@ module github.com/aoscloud/aos_common
 
 go 1.14
 
+replace github.com/ThalesIgnite/crypto11 => github.com/aoscloud/crypto11 v1.0.3-0.20220217163524-ddd0ace39e6f
+
 require (
+	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/cavaliercoder/grab v2.0.0+incompatible
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.5.2
