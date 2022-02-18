@@ -495,7 +495,7 @@ func TestWrongCaCert(t *testing.T) {
 
 	client, err := wsclient.New("Test", wsclient.ClientParam{CaCertFile: ""}, nil)
 	if err != nil {
-		t.Errorf("Can't create client: %s", err)
+		t.Fatalf("Can't create client: %s", err)
 	}
 
 	if err = client.Connect(serverURL); err == nil {
@@ -504,27 +504,17 @@ func TestWrongCaCert(t *testing.T) {
 
 	client.Close()
 
-	client, err = wsclient.New("Test", wsclient.ClientParam{CaCertFile: keyFile}, nil)
-	if err == nil {
+	if _, err = wsclient.New("Test", wsclient.ClientParam{CaCertFile: keyFile}, nil); err == nil {
 		t.Error("Expecting an error due to invalid CA cert file")
+
+		client.Close()
 	}
 
-	if err = client.Connect(serverURL); err == nil {
-		t.Error("Expecting an error due to invalid CA cert")
-	}
-
-	client.Close()
-
-	client, err = wsclient.New("Test", wsclient.ClientParam{CaCertFile: "123123"}, nil)
-	if err == nil {
+	if client, err = wsclient.New("Test", wsclient.ClientParam{CaCertFile: "123123"}, nil); err == nil {
 		t.Error("Expecting an error due to absence of cert file")
-	}
 
-	if err = client.Connect(serverURL); err == nil {
-		t.Error("Expecting an error due to path to nonexistent file")
+		client.Close()
 	}
-
-	client.Close()
 }
 
 func TestWSTimeout(t *testing.T) {
@@ -539,9 +529,9 @@ func TestWSTimeout(t *testing.T) {
 		minTimeout int
 		maxTimeout int
 	}{
-		{0, 120, 121}, // 0 - Use default timeout which is 120 sec
 		{1, 1, 2},
-		{10, 10, 11},
+		{3, 3, 4},
+		{5, 5, 6},
 	}
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, nil)

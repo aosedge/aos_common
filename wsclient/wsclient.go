@@ -58,6 +58,7 @@ type Client struct {
 	disconnectChannel chan bool
 	wsDialer          websocket.Dialer
 	clientParam       ClientParam
+	cryptoContext     *cryptutils.CryptoContext
 }
 
 // ClientParam client parameters.
@@ -88,10 +89,18 @@ func New(name string, clientParam ClientParam, messageHandler func([]byte)) (cli
 		disconnectChannel: make(chan bool),
 		clientParam:       clientParam,
 	}
+
 	// Check if system root certificate override is active and if so update tls config with custom CA
 	if len(clientParam.CaCertFile) > 0 {
-		if client.wsDialer.TLSClientConfig, err = cryptutils.GetClientTLSConfig(clientParam.CaCertFile); err != nil {
-			return client, aoserrors.Wrap(err)
+		cryptoContext, err := cryptutils.NewCryptoContext(clientParam.CaCertFile)
+		if err != nil {
+			return nil, aoserrors.Wrap(err)
+		}
+
+		client.cryptoContext = cryptoContext
+
+		if client.wsDialer.TLSClientConfig, err = cryptoContext.GetClientTLSConfig(); err != nil {
+			return nil, aoserrors.Wrap(err)
 		}
 
 		log.WithFields(log.Fields{
@@ -197,7 +206,21 @@ func (client *Client) IsConnected() (result bool) {
 func (client *Client) Close() (err error) {
 	log.WithFields(log.Fields{"client": client.name}).Info("Close ws client")
 
-	return aoserrors.Wrap(client.Disconnect())
+	if disconnectErr := aoserrors.Wrap(client.Disconnect()); disconnectErr != nil {
+		if err == nil {
+			err = aoserrors.Wrap(disconnectErr)
+		}
+	}
+
+	if client.cryptoContext != nil {
+		if contextErr := client.cryptoContext.Close(); contextErr != nil {
+			if err == nil {
+				err = aoserrors.Wrap(contextErr)
+			}
+		}
+	}
+
+	return err
 }
 
 // SendRequest sends request and waits for response.
