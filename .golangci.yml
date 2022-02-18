@@ -3,13 +3,19 @@ linters:
   disable:
     - varnamelen
     - exhaustivestruct
-    - paralleltest
     - gochecknoinits
     - gci
     - exhaustive
     - nlreturn
     - cyclop
     - nestif
+    - ireturn
+    - gomoddirectives
+    # deprecated
+    - interfacer
+    - golint
+    - scopelint
+    - maligned
 
 linters-settings:
   revive:
@@ -20,6 +26,11 @@ linters-settings:
   gosec:
     excludes:
       - G204
+
+  gomnd:
+    settings:
+      mnd:
+        ignored-numbers: 0o600,0o755,2,10,16,32,64,128
 
   gofumpt:
     lang-version: "1.14"
@@ -32,5 +43,8 @@ issues:
     - path: _test.go
       linters:
         - funlen
-        - cyclop
+        - gocyclo
         - gochecknoglobals
+        - gocognit
+        - paralleltest
+        - dupl
