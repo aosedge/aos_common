@@ -5,9 +5,9 @@
 OUT_DIR="api"
 
 IAM_SOURCES=" \
-    iamanager/v1/iamanagerprotected.proto \
-    iamanager/v1/iamanagerpublic.proto \
-    iamanager/v1/iamanagercommon.proto"
+    iamanager/v2/iamanagerprotected.proto \
+    iamanager/v2/iamanagerpublic.proto \
+    iamanager/v2/iamanagercommon.proto"
 
 SM_SOURCES="servicemanager/v1/servicemanager.proto"
 
