@@ -315,11 +315,9 @@ func (client *Client) processMessages() {
 
 		log.WithFields(log.Fields{"client": client.name, "message": string(message)}).Debug("Receive message")
 
-		if client.findRequestID(message) {
-			return
-		}
+		rspFound := client.findRequestID(message)
 
-		if client.messageHandler != nil {
+		if client.messageHandler != nil && !rspFound {
 			client.messageHandler(message)
 		}
 	}
