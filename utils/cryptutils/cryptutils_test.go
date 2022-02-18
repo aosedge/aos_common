@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"net/url"
 	"os"
 	"os/exec"
 	"path"
@@ -67,17 +68,6 @@ func TestMain(m *testing.M) {
 /***********************************************************************************************************************
  * Tests
  **********************************************************************************************************************/
-
-func TestGetCertPool(t *testing.T) {
-	fileName, err := savePEMFile(testtools.GetCACertificate())
-	if err != nil {
-		t.Fatalf("Can't save PRM file: %s", err)
-	}
-
-	if _, err = cryptutils.GetCaCertPool(fileName); err != nil {
-		t.Errorf("Can't create CA cert pool: %s", err)
-	}
-}
 
 func TestLoadKey(t *testing.T) {
 	type privateKeyPEMTest struct {
@@ -169,7 +159,7 @@ gfJB2R6A3jbBPTF7i8tb0iTNK+dikgH3hUAR3z6cs6bpgQRPXvTqeuM0acQuF4Z7
 			t.Fatalf("Can't save PRM file: %s", err)
 		}
 
-		_, err = cryptutils.LoadKey(fileName)
+		_, err = cryptutils.LoadPrivateKeyFromFile(fileName)
 
 		if err != nil && test.err == nil {
 			t.Errorf("Got error: %s. Test: %s", err, test.name)
@@ -218,7 +208,7 @@ func TestSaveKey(t *testing.T) {
 
 		fileName := path.Join(tmpDir, fmt.Sprintf("key%d.%s", i, cryptutils.PEMExt))
 
-		if err = cryptutils.SaveKey(fileName, key); err != nil {
+		if err = cryptutils.SavePrivateKeyToFile(fileName, key); err != nil {
 			t.Fatalf("Can't save key: %s", err)
 		}
 
@@ -250,7 +240,7 @@ func TestCertificate(t *testing.T) {
 		t.Fatalf("Can't save PRM file: %s", err)
 	}
 
-	x509Cert, err := cryptutils.LoadCertificate(fileName)
+	x509Cert, err := cryptutils.LoadCertificateFromFile(fileName)
 	if err != nil {
 		t.Fatalf("Can't load certificate: %s", err)
 	}
@@ -261,7 +251,7 @@ func TestCertificate(t *testing.T) {
 
 	certFile := path.Join(tmpDir, "cert.pem")
 
-	if err = cryptutils.SaveCertificate(certFile, x509Cert); err != nil {
+	if err = cryptutils.SaveCertificateToFile(certFile, x509Cert); err != nil {
 		t.Errorf("Can't save certificate: %s", err)
 	}
 
@@ -276,9 +266,31 @@ func TestCertificate(t *testing.T) {
 }
 
 func TestGetTLSConfig(t *testing.T) {
+	tlsDir, err := ioutil.TempDir(tmpDir, "tlsconfig")
+	if err != nil {
+		t.Fatalf("Can't create TLS config dir: %s", err)
+	}
+
+	defer os.RemoveAll(tlsDir)
+
+	rootCAPath := path.Join(tlsDir, "root."+cryptutils.PEMExt)
+
+	if err = ioutil.WriteFile(rootCAPath, testtools.GetCACertificate(), 0o600); err != nil {
+		t.Fatalf("Can't save certificate: %s", err)
+	}
+
 	key, err := rsa.GenerateKey(rand.Reader, 2048)
 	if err != nil {
 		t.Fatalf("Can't generate key: %s", err)
+	}
+
+	keyURL := url.URL{
+		Scheme: cryptutils.SchemeFile,
+		Path:   path.Join(tlsDir, "key."+cryptutils.PEMExt),
+	}
+
+	if err = cryptutils.SavePrivateKeyToFile(keyURL.Path, key); err != nil {
+		t.Fatalf("Can't save certificate: %s", err)
 	}
 
 	csr, err := testtools.CreateCSR(key)
@@ -291,44 +303,39 @@ func TestGetTLSConfig(t *testing.T) {
 		t.Fatalf("Can't create certificate: %s", err)
 	}
 
-	tlsDir, err := ioutil.TempDir(tmpDir, "tlsconfig")
-	if err != nil {
-		t.Fatalf("Can't create TLS config dir: %s", err)
-	}
-
-	defer os.RemoveAll(tlsDir)
-
 	x509Cert, err := cryptutils.PEMToX509Cert(cert)
 	if err != nil {
 		t.Fatalf("Can't parse certificate: %s", err)
 	}
 
-	if err = ioutil.WriteFile(path.Join(tlsDir, "root."+cryptutils.PEMExt),
-		testtools.GetCACertificate(), 0o600); err != nil {
+	certURL := url.URL{
+		Scheme: cryptutils.SchemeFile,
+		Path:   path.Join(tlsDir, "cert."+cryptutils.PEMExt),
+	}
+
+	if err = cryptutils.SaveCertificateToFile(certURL.Path, x509Cert); err != nil {
 		t.Fatalf("Can't save certificate: %s", err)
 	}
 
-	if err = cryptutils.SaveCertificate(path.Join(tlsDir, "cert."+cryptutils.PEMExt), x509Cert); err != nil {
-		t.Fatalf("Can't save certificate: %s", err)
+	cryptoContext, err := cryptutils.NewCryptoContext(rootCAPath)
+	if err != nil {
+		t.Fatalf("Can't create crypto context: %s", err)
 	}
+	defer cryptoContext.Close()
 
-	if err = cryptutils.SaveKey(path.Join(tlsDir, "key."+cryptutils.PEMExt), key); err != nil {
-		t.Fatalf("Can't save certificate: %s", err)
-	}
-
-	if _, err = cryptutils.GetClientMutualTLSConfig(path.Join(tlsDir, "root."+cryptutils.PEMExt), tlsDir); err != nil {
+	if _, err = cryptoContext.GetClientMutualTLSConfig(certURL.String(), keyURL.String()); err != nil {
 		t.Errorf("Can't get client TLS config: %s", err)
 	}
 
-	if _, err = cryptutils.GetServerMutualTLSConfig(path.Join(tlsDir, "root."+cryptutils.PEMExt), tlsDir); err != nil {
+	if _, err = cryptoContext.GetServerMutualTLSConfig(certURL.String(), keyURL.String()); err != nil {
 		t.Errorf("Can't get server mutual TLS config: %s", err)
 	}
 
-	if _, err = cryptutils.GetClientTLSConfig(path.Join(tlsDir, "root."+cryptutils.PEMExt)); err != nil {
+	if _, err = cryptoContext.GetClientTLSConfig(); err != nil {
 		t.Errorf("Can't get client TLS config: %s", err)
 	}
 
-	if _, err = cryptutils.GetServerTLSConfig(tlsDir); err != nil {
+	if _, err = cryptoContext.GetServerTLSConfig(certURL.String(), keyURL.String()); err != nil {
 		t.Errorf("Can't get server TLS config: %s", err)
 	}
 }
