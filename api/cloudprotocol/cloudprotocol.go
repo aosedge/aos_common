@@ -528,9 +528,9 @@ type ScheduleRule struct {
 // DecodedDesiredStatus decoded desired status.
 type DecodedDesiredStatus struct {
 	BoardConfig       json.RawMessage
+	Components        []ComponentInfo
 	Layers            []LayerInfo
 	Services          []ServiceInfo
-	Components        []ComponentInfo
 	Instances         []InstanceInfo
 	FOTASchedule      ScheduleRule
 	SOTASchedule      ScheduleRule
