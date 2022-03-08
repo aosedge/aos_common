@@ -573,8 +573,8 @@ type DecodedOverrideEnvVars struct {
 // EnvVarsInstanceInfo struct with envs and related service and user.
 type EnvVarsInstanceInfo struct {
 	ServiceID string       `json:"serviceId"`
-	SubjectID string       `json:"subjectId,omitempty"`
-	Instance  uint64       `json:"instance,omitempty"`
+	SubjectID *string      `json:"subjectId,omitempty"`
+	Instance  *uint64      `json:"instance,omitempty"`
 	EnvVars   []EnvVarInfo `json:"envVars"`
 }
 
@@ -593,8 +593,8 @@ type OverrideEnvVarsStatus struct {
 // EnvVarsInstanceStatus struct with envs status and related service and user.
 type EnvVarsInstanceStatus struct {
 	ServiceID string         `json:"serviceId"`
-	SubjectID string         `json:"subjectId,omitempty"`
-	Instance  uint64         `json:"instance,omitempty"`
+	SubjectID *string        `json:"subjectId,omitempty"`
+	Instance  *uint64        `json:"instance,omitempty"`
 	Statuses  []EnvVarStatus `json:"statuses"`
 }
 
