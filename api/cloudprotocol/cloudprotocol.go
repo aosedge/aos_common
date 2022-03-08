@@ -65,9 +65,11 @@ const (
 
 // Alert tags.
 const (
-	AlertTagSystemError = "systemError"
-	AlertTagResource    = "resourceAlert"
-	AlertTagAosCore     = "aosCore"
+	AlertTagSystemError      = "systemAlert"
+	AlertTagAosCore          = "coreAlert"
+	AlertTagResource         = "resourceAlert"
+	AlertTagDownloadProgress = "downloadProgressAlert"
+	AlertTagServiceInstance  = "serviceInstanceAlert"
 )
 
 // Unit statuses.
@@ -88,6 +90,13 @@ const (
 	ForceUpdate     = "force"
 	TriggerUpdate   = "trigger"
 	TimetableUpdate = "timetable"
+)
+
+// Download target types.
+const (
+	DownloadTargetComponent = "component"
+	DownloadTargetLayer     = "layer"
+	DownloadTargetService   = "service"
 )
 
 /***********************************************************************************************************************
@@ -290,11 +299,15 @@ type SystemAlert struct {
 
 // DownloadAlert download alert structure.
 type DownloadAlert struct {
-	Message         string `json:"message"`
-	Progress        string `json:"progress"`
-	URL             string `json:"url"`
-	DownloadedBytes string `json:"downloadedBytes"`
-	TotalBytes      string `json:"totalBytes"`
+	TargetType          string `json:"targetType"`
+	TargetID            string `json:"targetId"`
+	TargetAosVersion    uint64 `json:"targetAosVersion"`
+	TargetVendorVersion string `json:"targetVendorVersion"`
+	Message             string `json:"message"`
+	Progress            string `json:"progress"`
+	URL                 string `json:"url"`
+	DownloadedBytes     string `json:"downloadedBytes"`
+	TotalBytes          string `json:"totalBytes"`
 }
 
 // ResourceAlert resource alert structure.
@@ -315,13 +328,20 @@ type ResourceValidateAlert struct {
 	Message []ResourceValidateError `json:"message"`
 }
 
+// ServiceInstanceAlert system alert structure.
+type ServiceInstanceAlert struct {
+	ServiceID  string  `json:"serviceId"`
+	AosVersion uint64  `json:"aosVersion"`
+	SubjectID  *string `json:"subjectId,omitempty"`
+	Instance   *uint64 `json:"instance,omitempty"`
+	Message    string  `json:"message"`
+}
+
 // AlertItem alert item structure.
 type AlertItem struct {
-	Timestamp  time.Time   `json:"timestamp"`
-	Tag        string      `json:"tag"`
-	Source     string      `json:"source"`
-	AosVersion uint64      `json:"aosVersion,omitempty"`
-	Payload    interface{} `json:"payload"`
+	Timestamp time.Time   `json:"timestamp"`
+	Tag       string      `json:"tag"`
+	Payload   interface{} `json:"payload"`
 }
 
 // Alerts alerts message structure.
