@@ -30,7 +30,7 @@ import (
  **********************************************************************************************************************/
 
 // ProtocolVersion specifies supported protocol version.
-const ProtocolVersion = 3
+const ProtocolVersion = 4
 
 // UnitSecretVersion specifies supported version of UnitSecret message.
 const UnitSecretVersion = 2
