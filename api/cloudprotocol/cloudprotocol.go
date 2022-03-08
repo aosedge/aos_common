@@ -92,6 +92,12 @@ const (
 	TimetableUpdate = "timetable"
 )
 
+// Service instance states.
+const (
+	InstanceStateActive = "active"
+	InstanceStateFailed = "failed"
+)
+
 // Download target types.
 const (
 	DownloadTargetComponent = "component"
