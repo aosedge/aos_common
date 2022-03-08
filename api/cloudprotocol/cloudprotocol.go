@@ -374,49 +374,55 @@ type UnitStatus struct {
 	UnitSubjects []string            `json:"unitSubjects"`
 }
 
+// ErrorInfo error information.
+type ErrorInfo struct {
+	AosCode  int    `json:"aosCode"`
+	ExitCode int    `json:"exitCode"`
+	Message  string `json:"message,omitempty"`
+}
+
 // InstanceStatus service instance runtime status.
 type InstanceStatus struct {
-	ServiceID  string `json:"serviceId"`
-	AosVersion uint64 `json:"aosVersion"`
-	SubjectID  string `json:"subjectId"`
-	Instance   uint64 `json:"instance"`
-	State      string `json:"state"`
-	Error      string `json:"error,omitempty"`
-	ExitCode   uint64 `json:"exitCode,omitempty"`
+	ServiceID     string     `json:"serviceId"`
+	AosVersion    uint64     `json:"aosVersion"`
+	SubjectID     string     `json:"subjectId"`
+	Instance      uint64     `json:"instance"`
+	StateChecksum string     `json:"stateChecksum,omitempty"`
+	RunState      string     `json:"runState"`
+	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // BoardConfigStatus board config status.
 type BoardConfigStatus struct {
-	VendorVersion string `json:"vendorVersion"`
-	Status        string `json:"status"`
-	Error         string `json:"error,omitempty"`
+	VendorVersion string     `json:"vendorVersion"`
+	Status        string     `json:"status"`
+	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // ServiceStatus service status.
 type ServiceStatus struct {
-	ID            string `json:"id"`
-	AosVersion    uint64 `json:"aosVersion"`
-	Status        string `json:"status"`
-	Error         string `json:"error,omitempty"`
-	StateChecksum string `json:"stateChecksum,omitempty"`
+	ID         string     `json:"id"`
+	AosVersion uint64     `json:"aosVersion"`
+	Status     string     `json:"status"`
+	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // LayerStatus layer status.
 type LayerStatus struct {
-	ID         string `json:"id"`
-	AosVersion uint64 `json:"aosVersion"`
-	Digest     string `json:"digest"`
-	Status     string `json:"status"`
-	Error      string `json:"error,omitempty"`
+	ID         string     `json:"id"`
+	AosVersion uint64     `json:"aosVersion"`
+	Digest     string     `json:"digest"`
+	Status     string     `json:"status"`
+	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // ComponentStatus component status.
 type ComponentStatus struct {
-	ID            string `json:"id"`
-	AosVersion    uint64 `json:"aosVersion"`
-	VendorVersion string `json:"vendorVersion"`
-	Status        string `json:"status"`
-	Error         string `json:"error,omitempty"`
+	ID            string     `json:"id"`
+	AosVersion    uint64     `json:"aosVersion"`
+	VendorVersion string     `json:"vendorVersion"`
+	Status        string     `json:"status"`
+	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // AlertRule describes alert rule.
