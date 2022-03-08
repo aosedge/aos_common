@@ -40,8 +40,9 @@ COMMON_OPTIONS="--proto_path=${1} --go_out=${OUT_DIR} \
 
 # clear output dir
 
-rm ${OUT_DIR} -rf
-mkdir ${OUT_DIR}
+mkdir -p ${OUT_DIR}
+
+rm -rf ${OUT_DIR}/communicationmanager ${OUT_DIR}/iamanager ${OUT_DIR}/servicemanager ${OUT_DIR}/updatemanager
 
 # Generate IAM services
 
