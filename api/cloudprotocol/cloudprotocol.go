@@ -195,8 +195,8 @@ type DesiredStatus struct {
 // RequestServiceCrashLog request service crash log message.
 type RequestServiceCrashLog struct {
 	ServiceID string     `json:"serviceId"`
-	SubjectID string     `json:"subjectId,omitempty"`
-	Instance  uint64     `json:"instance,omitempty"`
+	SubjectID *string    `json:"subjectId,omitempty"`
+	Instance  *uint64    `json:"instance,omitempty"`
 	LogID     string     `json:"logId"`
 	From      *time.Time `json:"from"`
 	Till      *time.Time `json:"till"`
@@ -205,8 +205,8 @@ type RequestServiceCrashLog struct {
 // RequestServiceLog request service log message.
 type RequestServiceLog struct {
 	ServiceID string     `json:"serviceId"`
-	SubjectID string     `json:"subjectId,omitempty"`
-	Instance  uint64     `json:"instance,omitempty"`
+	SubjectID *string    `json:"subjectId,omitempty"`
+	Instance  *uint64    `json:"instance,omitempty"`
 	LogID     string     `json:"logId"`
 	From      *time.Time `json:"from"`
 	Till      *time.Time `json:"till"`
