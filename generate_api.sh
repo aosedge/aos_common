@@ -9,7 +9,7 @@ IAM_SOURCES=" \
     iamanager/v2/iamanagerpublic.proto \
     iamanager/v2/iamanagercommon.proto"
 
-SM_SOURCES="servicemanager/v1/servicemanager.proto"
+SM_SOURCES="servicemanager/v2/servicemanager.proto"
 
 UM_SOURCES="updatemanager/v1/updatemanager.proto"
 
