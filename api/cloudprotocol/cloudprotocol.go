@@ -192,24 +192,34 @@ type DesiredStatus struct {
 	Certificates      []Certificate      `json:"certificates,omitempty"`
 }
 
+// InstanceFilter instance filter structure.
+type InstanceFilter struct {
+	ServiceID string  `json:"serviceId"`
+	SubjectID *string `json:"subjectId,omitempty"`
+	Instance  *uint64 `json:"instance,omitempty"`
+}
+
+// InstanceIdent instance identification information.
+type InstanceIdent struct {
+	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
+}
+
 // RequestServiceCrashLog request service crash log message.
 type RequestServiceCrashLog struct {
-	ServiceID string     `json:"serviceId"`
-	SubjectID *string    `json:"subjectId,omitempty"`
-	Instance  *uint64    `json:"instance,omitempty"`
-	LogID     string     `json:"logId"`
-	From      *time.Time `json:"from"`
-	Till      *time.Time `json:"till"`
+	InstanceFilter
+	LogID string     `json:"logId"`
+	From  *time.Time `json:"from"`
+	Till  *time.Time `json:"till"`
 }
 
 // RequestServiceLog request service log message.
 type RequestServiceLog struct {
-	ServiceID string     `json:"serviceId"`
-	SubjectID *string    `json:"subjectId,omitempty"`
-	Instance  *uint64    `json:"instance,omitempty"`
-	LogID     string     `json:"logId"`
-	From      *time.Time `json:"from"`
-	Till      *time.Time `json:"till"`
+	InstanceFilter
+	LogID string     `json:"logId"`
+	From  *time.Time `json:"from"`
+	Till  *time.Time `json:"till"`
 }
 
 // RequestSystemLog request system log message.
@@ -264,38 +274,30 @@ type DecryptDataStruct struct {
 
 // StateAcceptance state acceptance message.
 type StateAcceptance struct {
-	ServiceID string `json:"serviceId"`
-	SubjectID string `json:"subjectId"`
-	Instance  uint64 `json:"instance"`
-	Checksum  string `json:"checksum"`
-	Result    string `json:"result"`
-	Reason    string `json:"reason"`
+	InstanceIdent
+	Checksum string `json:"checksum"`
+	Result   string `json:"result"`
+	Reason   string `json:"reason"`
 }
 
 // UpdateState state update message.
 type UpdateState struct {
-	ServiceID string `json:"serviceId"`
-	SubjectID string `json:"subjectId"`
-	Instance  uint64 `json:"instance"`
-	Checksum  string `json:"stateChecksum"`
-	State     string `json:"state"`
+	InstanceIdent
+	Checksum string `json:"stateChecksum"`
+	State    string `json:"state"`
 }
 
 // NewState new state structure.
 type NewState struct {
-	ServiceID string `json:"serviceId"`
-	SubjectID string `json:"subjectId"`
-	Instance  uint64 `json:"instance"`
-	Checksum  string `json:"stateChecksum"`
-	State     string `json:"state"`
+	InstanceIdent
+	Checksum string `json:"stateChecksum"`
+	State    string `json:"state"`
 }
 
 // StateRequest state request structure.
 type StateRequest struct {
-	ServiceID string `json:"serviceId"`
-	SubjectID string `json:"subjectId"`
-	Instance  uint64 `json:"instance"`
-	Default   bool   `json:"default"`
+	InstanceIdent
+	Default bool `json:"default"`
 }
 
 // SystemAlert system alert structure.
@@ -336,11 +338,9 @@ type ResourceValidateAlert struct {
 
 // ServiceInstanceAlert system alert structure.
 type ServiceInstanceAlert struct {
-	ServiceID  string  `json:"serviceId"`
-	AosVersion uint64  `json:"aosVersion"`
-	SubjectID  *string `json:"subjectId,omitempty"`
-	Instance   *uint64 `json:"instance,omitempty"`
-	Message    string  `json:"message"`
+	InstanceIdent
+	AosVersion uint64 `json:"aosVersion"`
+	Message    string `json:"message"`
 }
 
 // AlertItem alert item structure.
@@ -364,9 +364,7 @@ type GlobalMonitoringData struct {
 
 // ServiceMonitoringData monitoring data for service.
 type ServiceMonitoringData struct {
-	ServiceID  string `json:"serviceId"`
-	SubjectID  string `json:"subjectId"`
-	Instance   uint64 `json:"instance"`
+	InstanceIdent
 	RAM        uint64 `json:"ram"`
 	CPU        uint64 `json:"cpu"`
 	UsedDisk   uint64 `json:"usedDisk"`
@@ -409,10 +407,8 @@ type ErrorInfo struct {
 
 // InstanceStatus service instance runtime status.
 type InstanceStatus struct {
-	ServiceID     string     `json:"serviceId"`
+	InstanceIdent
 	AosVersion    uint64     `json:"aosVersion"`
-	SubjectID     string     `json:"subjectId"`
-	Instance      uint64     `json:"instance"`
 	StateChecksum string     `json:"stateChecksum,omitempty"`
 	RunState      string     `json:"runState"`
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
@@ -587,10 +583,8 @@ type DecodedOverrideEnvVars struct {
 
 // EnvVarsInstanceInfo struct with envs and related service and user.
 type EnvVarsInstanceInfo struct {
-	ServiceID string       `json:"serviceId"`
-	SubjectID *string      `json:"subjectId,omitempty"`
-	Instance  *uint64      `json:"instance,omitempty"`
-	EnvVars   []EnvVarInfo `json:"envVars"`
+	InstanceFilter
+	EnvVars []EnvVarInfo `json:"envVars"`
 }
 
 // EnvVarInfo env info with id and time to live.
@@ -607,10 +601,8 @@ type OverrideEnvVarsStatus struct {
 
 // EnvVarsInstanceStatus struct with envs status and related service and user.
 type EnvVarsInstanceStatus struct {
-	ServiceID string         `json:"serviceId"`
-	SubjectID *string        `json:"subjectId,omitempty"`
-	Instance  *uint64        `json:"instance,omitempty"`
-	Statuses  []EnvVarStatus `json:"statuses"`
+	InstanceFilter
+	Statuses []EnvVarStatus `json:"statuses"`
 }
 
 // EnvVarStatus env status with error message.
