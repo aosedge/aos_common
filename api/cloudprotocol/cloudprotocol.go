@@ -408,6 +408,7 @@ type ErrorInfo struct {
 // InstanceStatus service instance runtime status.
 type InstanceStatus struct {
 	InstanceIdent
+	AosVersion    uint64     `json:"aosVersion"`
 	StateChecksum string     `json:"stateChecksum,omitempty"`
 	RunState      string     `json:"runState"`
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
