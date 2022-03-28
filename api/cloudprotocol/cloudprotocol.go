@@ -305,6 +305,12 @@ type SystemAlert struct {
 	Message string `json:"message"`
 }
 
+// CoreAlert system alert structure.
+type CoreAlert struct {
+	CoreComponent string `json:"coreComponent"`
+	Message       string `json:"message"`
+}
+
 // DownloadAlert download alert structure.
 type DownloadAlert struct {
 	TargetType          string `json:"targetType"`
