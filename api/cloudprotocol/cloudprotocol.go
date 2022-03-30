@@ -368,8 +368,8 @@ type GlobalMonitoringData struct {
 	OutTraffic uint64 `json:"outTraffic"`
 }
 
-// ServiceMonitoringData monitoring data for service.
-type ServiceMonitoringData struct {
+// InstanceMonitoringData monitoring data for service.
+type InstanceMonitoringData struct {
 	InstanceIdent
 	RAM        uint64 `json:"ram"`
 	CPU        uint64 `json:"cpu"`
@@ -380,9 +380,9 @@ type ServiceMonitoringData struct {
 
 // MonitoringData monitoring data structure.
 type MonitoringData struct {
-	Timestamp    time.Time               `json:"timestamp"`
-	Global       GlobalMonitoringData    `json:"global"`
-	ServicesData []ServiceMonitoringData `json:"servicesData"`
+	Timestamp        time.Time                `json:"timestamp"`
+	Global           GlobalMonitoringData     `json:"global"`
+	ServiceInstances []InstanceMonitoringData `json:"serviceInstances"`
 }
 
 // PushLog push service log structure.
