@@ -67,7 +67,8 @@ const (
 const (
 	AlertTagSystemError      = "systemAlert"
 	AlertTagAosCore          = "coreAlert"
-	AlertTagResource         = "resourceAlert"
+	AlertTagResourceValidate = "resourceValidateAlert"
+	AlertTagDeviceAllocate   = "deviceAllocateAlert"
 	AlertTagSystemQuota      = "systemQuotaAlert"
 	AlertTagInstanceQuota    = "instanceQuotaAlert"
 	AlertTagDownloadProgress = "downloadProgressAlert"
@@ -337,6 +338,13 @@ type InstanceQuotaAlert struct {
 	InstanceIdent
 	Parameter string `json:"parameter"`
 	Value     uint64 `json:"value"`
+}
+
+// DeviceAllocateAlert device allocate alert structure.
+type DeviceAllocateAlert struct {
+	InstanceIdent
+	Device  string `json:"device"`
+	Message string `json:"message"`
 }
 
 // ResourceValidateError resource validate error structure.
