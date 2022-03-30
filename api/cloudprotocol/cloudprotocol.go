@@ -68,6 +68,8 @@ const (
 	AlertTagSystemError      = "systemAlert"
 	AlertTagAosCore          = "coreAlert"
 	AlertTagResource         = "resourceAlert"
+	AlertTagSystemQuota      = "systemQuotaAlert"
+	AlertTagInstanceQuota    = "instanceQuotaAlert"
 	AlertTagDownloadProgress = "downloadProgressAlert"
 	AlertTagServiceInstance  = "serviceInstanceAlert"
 )
@@ -324,8 +326,15 @@ type DownloadAlert struct {
 	TotalBytes          string `json:"totalBytes"`
 }
 
-// ResourceAlert resource alert structure.
-type ResourceAlert struct {
+// SystemQuotaAlert system quota alert structure.
+type SystemQuotaAlert struct {
+	Parameter string `json:"parameter"`
+	Value     uint64 `json:"value"`
+}
+
+// InstanceQuotaAlert instance quota alert structure.
+type InstanceQuotaAlert struct {
+	InstanceIdent
 	Parameter string `json:"parameter"`
 	Value     uint64 `json:"value"`
 }
