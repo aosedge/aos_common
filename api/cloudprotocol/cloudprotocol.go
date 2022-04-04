@@ -355,8 +355,7 @@ type ResourceValidateError struct {
 
 // ResourceValidateAlert resource validate alert structure.
 type ResourceValidateAlert struct {
-	Type    string                  `json:"type"`
-	Message []ResourceValidateError `json:"message"`
+	ResourcesErrors []ResourceValidateError `json:"resourcesErrors"`
 }
 
 // ServiceInstanceAlert system alert structure.
