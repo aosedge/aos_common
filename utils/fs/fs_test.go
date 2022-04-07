@@ -116,6 +116,79 @@ func TestMountAlreadyMounted(t *testing.T) {
 	}
 }
 
+func TestMountPoint(t *testing.T) {
+	type testData struct {
+		mountPointFirst  string
+		mountPointSecond string
+		compare          func(string, string) bool
+	}
+
+	testsData := []testData{
+		{
+			mountPointFirst:  path.Join(tmpDir, "mount1"),
+			mountPointSecond: path.Join(tmpDir, "mount1"),
+			compare:          func(mount1 string, mount2 string) bool { return mount1 == mount2 },
+		},
+		{
+			mountPointFirst:  path.Join(tmpDir, "mount1"),
+			mountPointSecond: path.Join(tmpDir, "mount2"),
+			compare:          func(mount1 string, mount2 string) bool { return mount1 != mount2 },
+		},
+	}
+
+	partition := disk.Partitions[0]
+
+	for _, data := range testsData {
+		if err := fs.Mount(partition.Device, data.mountPointFirst, partition.Type, 0, ""); err != nil {
+			t.Fatalf("Can't mount partition: %s", err)
+		}
+
+		if err := fs.Mount(partition.Device, data.mountPointSecond, partition.Type, 0, ""); err != nil {
+			t.Fatalf("Can't mount partition: %s", err)
+		}
+
+		firstDir := filepath.Join(data.mountPointFirst, "dir1")
+
+		if err := os.MkdirAll(firstDir, 0o755); err != nil {
+			t.Fatalf("Can't create directory: %s", err)
+		}
+
+		firstMountPoint, err := fs.GetMountPoint(firstDir)
+		if err != nil {
+			t.Fatalf("Can't get mount point: %s", err)
+		}
+
+		secondDir := filepath.Join(data.mountPointSecond, "dir2")
+
+		if err := os.MkdirAll(secondDir, 0o755); err != nil {
+			t.Fatalf("Can't create directory: %s", err)
+		}
+
+		secondMountPoint, err := fs.GetMountPoint(secondDir)
+		if err != nil {
+			t.Fatalf("Can't get mount point: %s", err)
+		}
+
+		if !data.compare(firstMountPoint, secondMountPoint) {
+			t.Errorf("Incorrect mounts location")
+		}
+
+		if firstMountPoint == secondMountPoint {
+			if err := fs.Umount(data.mountPointFirst); err != nil {
+				t.Fatalf("Can't umount partition: %s", err)
+			}
+		} else {
+			if err := fs.Umount(data.mountPointFirst); err != nil {
+				t.Fatalf("Can't umount partition: %s", err)
+			}
+
+			if err := fs.Umount(data.mountPointSecond); err != nil {
+				t.Fatalf("Can't umount partition: %s", err)
+			}
+		}
+	}
+}
+
 func TestOverlayMount(t *testing.T) {
 	content := []string{"file0", "file1", "file2", "file3", "file4", "file5", "file6"}
 	lowerDirs := []string{
