@@ -18,8 +18,10 @@
 package fs
 
 import (
+	"bufio"
 	"context"
 	"os"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -124,6 +126,41 @@ func Umount(mountPoint string) (err error) {
 	}
 
 	return nil
+}
+
+// GetMountPoint returns mount point for directory.
+func GetMountPoint(dir string) (mountPoint string, err error) {
+	file, err := os.Open("/proc/mounts")
+	if err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+
+		relPath, err := filepath.Rel(fields[1], dir)
+		if err != nil || strings.Contains(relPath, "..") {
+			continue
+		}
+
+		if len(fields[1]) > len(mountPoint) {
+			mountPoint = fields[1]
+		}
+	}
+
+	if mountPoint == "" {
+		return "", aoserrors.Errorf("failed to find mount point for %s", dir)
+	}
+
+	return mountPoint, nil
 }
 
 /***********************************************************************************************************************
