@@ -25,7 +25,6 @@ type IAMProtectedServiceClient interface {
 	ApplyCert(ctx context.Context, in *ApplyCertRequest, opts ...grpc.CallOption) (*ApplyCertResponse, error)
 	EncryptDisk(ctx context.Context, in *EncryptDiskRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	FinishProvisioning(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*empty.Empty, error)
-	SetUsers(ctx context.Context, in *Users, opts ...grpc.CallOption) (*empty.Empty, error)
 	RegisterInstance(ctx context.Context, in *RegisterInstanceRequest, opts ...grpc.CallOption) (*RegisterInstanceResponse, error)
 	UnregisterInstance(ctx context.Context, in *UnregisterInstanceRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 }
@@ -92,15 +91,6 @@ func (c *iAMProtectedServiceClient) FinishProvisioning(ctx context.Context, in *
 	return out, nil
 }
 
-func (c *iAMProtectedServiceClient) SetUsers(ctx context.Context, in *Users, opts ...grpc.CallOption) (*empty.Empty, error) {
-	out := new(empty.Empty)
-	err := c.cc.Invoke(ctx, "/iamanager.v2.IAMProtectedService/SetUsers", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 func (c *iAMProtectedServiceClient) RegisterInstance(ctx context.Context, in *RegisterInstanceRequest, opts ...grpc.CallOption) (*RegisterInstanceResponse, error) {
 	out := new(RegisterInstanceResponse)
 	err := c.cc.Invoke(ctx, "/iamanager.v2.IAMProtectedService/RegisterInstance", in, out, opts...)
@@ -129,7 +119,6 @@ type IAMProtectedServiceServer interface {
 	ApplyCert(context.Context, *ApplyCertRequest) (*ApplyCertResponse, error)
 	EncryptDisk(context.Context, *EncryptDiskRequest) (*empty.Empty, error)
 	FinishProvisioning(context.Context, *empty.Empty) (*empty.Empty, error)
-	SetUsers(context.Context, *Users) (*empty.Empty, error)
 	RegisterInstance(context.Context, *RegisterInstanceRequest) (*RegisterInstanceResponse, error)
 	UnregisterInstance(context.Context, *UnregisterInstanceRequest) (*empty.Empty, error)
 	mustEmbedUnimplementedIAMProtectedServiceServer()
@@ -156,9 +145,6 @@ func (UnimplementedIAMProtectedServiceServer) EncryptDisk(context.Context, *Encr
 }
 func (UnimplementedIAMProtectedServiceServer) FinishProvisioning(context.Context, *empty.Empty) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FinishProvisioning not implemented")
-}
-func (UnimplementedIAMProtectedServiceServer) SetUsers(context.Context, *Users) (*empty.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method SetUsers not implemented")
 }
 func (UnimplementedIAMProtectedServiceServer) RegisterInstance(context.Context, *RegisterInstanceRequest) (*RegisterInstanceResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterInstance not implemented")
@@ -287,24 +273,6 @@ func _IAMProtectedService_FinishProvisioning_Handler(srv interface{}, ctx contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _IAMProtectedService_SetUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(Users)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(IAMProtectedServiceServer).SetUsers(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/iamanager.v2.IAMProtectedService/SetUsers",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IAMProtectedServiceServer).SetUsers(ctx, req.(*Users))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 func _IAMProtectedService_RegisterInstance_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(RegisterInstanceRequest)
 	if err := dec(in); err != nil {
@@ -371,10 +339,6 @@ var IAMProtectedService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "FinishProvisioning",
 			Handler:    _IAMProtectedService_FinishProvisioning_Handler,
-		},
-		{
-			MethodName: "SetUsers",
-			Handler:    _IAMProtectedService_SetUsers_Handler,
 		},
 		{
 			MethodName: "RegisterInstance",
