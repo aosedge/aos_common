@@ -56,6 +56,45 @@ type ServiceAlertRules struct {
 	OutTraffic *AlertRule `json:"outTraffic,omitempty"`
 }
 
+// FileSystemMount specifies a mount instructions.
+type FileSystemMount struct {
+	Destination string   `json:"destination"`
+	Type        string   `json:"type,omitempty"`
+	Source      string   `json:"source,omitempty"`
+	Options     []string `json:"options,omitempty"`
+}
+
+// Host struct represents entry in /etc/hosts.
+type Host struct {
+	IP       string `json:"ip"`
+	Hostname string `json:"hostname"`
+}
+
+// DeviceInfo device information.
+type DeviceInfo struct {
+	Name        string   `json:"name"`
+	SharedCount int      `json:"sharedCount,omitempty"`
+	Groups      []string `json:"groups,omitempty"`
+	HostDevices []string `json:"hostDevices"`
+}
+
+// ResourceInfo resource information.
+type ResourceInfo struct {
+	Name   string            `json:"name"`
+	Groups []string          `json:"groups,omitempty"`
+	Mounts []FileSystemMount `json:"mounts,omitempty"`
+	Env    []string          `json:"env,omitempty"`
+	Hosts  []Host            `json:"hosts,omitempty"`
+}
+
+// BoardConfig board configuration.
+type BoardConfig struct {
+	FormatVersion uint64         `json:"formatVersion"`
+	VendorVersion string         `json:"vendorVersion"`
+	Devices       []DeviceInfo   `json:"devices"`
+	Resources     []ResourceInfo `json:"resources"`
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/
