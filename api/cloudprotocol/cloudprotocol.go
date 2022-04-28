@@ -659,3 +659,19 @@ func (component ComponentInfo) String() string {
 	return fmt.Sprintf("{id: %s, annotations: %s, vendorVersion: %s aosVersion: %d, description: %s}",
 		component.ID, component.Annotations, component.VendorVersion, component.AosVersion, component.Description)
 }
+
+func NewInstanceFilter(serviceID, subjectID string, instance int64) (filter InstanceFilter) {
+	filter.ServiceID = serviceID
+
+	if subjectID != "" {
+		filter.SubjectID = &subjectID
+	}
+
+	if instance != -1 {
+		localInstance := (uint64)(instance)
+
+		filter.Instance = &localInstance
+	}
+
+	return filter
+}
