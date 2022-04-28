@@ -1,0 +1,103 @@
+// SPDX-License-Identifier: Apache-2.0
+//
+// Copyright (C) 2022 Renesas Electronics Corporation.
+// Copyright (C) 2022 EPAM Systems, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package pbconvert_test
+
+import (
+	"os"
+	"testing"
+
+	"github.com/aoscloud/aos_common/api/cloudprotocol"
+	pb "github.com/aoscloud/aos_common/api/servicemanager/v2"
+	"github.com/aoscloud/aos_common/utils/pbconvert"
+	log "github.com/sirupsen/logrus"
+	"google.golang.org/protobuf/proto"
+)
+
+/***********************************************************************************************************************
+ * Init
+ **********************************************************************************************************************/
+
+func init() {
+	log.SetFormatter(&log.TextFormatter{
+		DisableTimestamp: false,
+		TimestampFormat:  "2006-01-02 15:04:05.000",
+		FullTimestamp:    true,
+	})
+	log.SetLevel(log.DebugLevel)
+	log.SetOutput(os.Stdout)
+}
+
+/***********************************************************************************************************************
+ * Tests
+ **********************************************************************************************************************/
+
+func TestInstanceFilterToPB(t *testing.T) {
+	type testFilter struct {
+		expectedIdent *pb.InstanceIdent
+		filter        cloudprotocol.InstanceFilter
+	}
+
+	testData := []testFilter{
+		{
+			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 1},
+			filter:        cloudprotocol.NewInstanceFilter("s1", "subj1", 1),
+		},
+		{
+			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "", Instance: 1},
+			filter:        cloudprotocol.NewInstanceFilter("s1", "", 1),
+		},
+		{
+			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: -1},
+			filter:        cloudprotocol.NewInstanceFilter("s1", "subj1", -1),
+		},
+		{
+			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "", Instance: -1},
+			filter:        cloudprotocol.NewInstanceFilter("s1", "", -1),
+		},
+	}
+
+	for _, testItem := range testData {
+		instance := pbconvert.InstanceFilterToPB(testItem.filter)
+
+		if !proto.Equal(instance, testItem.expectedIdent) {
+			t.Error("Incorrect instance")
+		}
+	}
+}
+
+func TestInstanceIdentToPB(t *testing.T) {
+	expectdInstance := &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2}
+
+	pbInstance := pbconvert.InstanceIdentToPB(
+		cloudprotocol.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2})
+
+	if !proto.Equal(pbInstance, expectdInstance) {
+		t.Error("Incorrect instance")
+	}
+}
+
+func TestInstanceIdentFromPB(t *testing.T) {
+	expectedInstance := cloudprotocol.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2}
+
+	receivedInstance := pbconvert.NewInstanceIdentFromPB(
+		&pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2})
+
+	if expectedInstance != receivedInstance {
+		t.Error("Incorrect instance")
+	}
+}
