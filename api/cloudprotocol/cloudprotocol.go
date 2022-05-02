@@ -188,6 +188,7 @@ type DesiredStatus struct {
 	BoardConfig       []byte             `json:"boardConfig"`
 	Services          []byte             `json:"services"`
 	Layers            []byte             `json:"layers"`
+	Instances         []byte             `json:"instances"`
 	Components        []byte             `json:"components"`
 	FOTASchedule      []byte             `json:"fotaSchedule"`
 	SOTASchedule      []byte             `json:"sotaSchedule"`
