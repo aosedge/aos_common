@@ -126,9 +126,7 @@ type MessageHeader struct {
 }
 
 // ServiceDiscoveryRequest service discovery request.
-type ServiceDiscoveryRequest struct {
-	Users []string `json:"users"`
-}
+type ServiceDiscoveryRequest struct{}
 
 // ServiceDiscoveryResponse service discovery response.
 type ServiceDiscoveryResponse struct {
