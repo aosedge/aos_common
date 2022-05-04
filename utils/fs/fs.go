@@ -163,6 +163,17 @@ func GetMountPoint(dir string) (mountPoint string, err error) {
 	return mountPoint, nil
 }
 
+// GetAvailableSize returns the amount of memory used by the partition.
+func GetAvailableSize(dir string) (availableSize int64, err error) {
+	var stat syscall.Statfs_t
+
+	if err = syscall.Statfs(dir, &stat); err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return int64(stat.Bavail) * stat.Bsize, nil
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
