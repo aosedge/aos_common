@@ -116,6 +116,33 @@ func TestMountAlreadyMounted(t *testing.T) {
 	}
 }
 
+func TestAvailableSize(t *testing.T) {
+	for _, part := range disk.Partitions {
+		if err := fs.Mount(part.Device, mountPoint, part.Type, 0, ""); err != nil {
+			t.Fatalf("Can't mount partition: %v", err)
+		}
+
+		firstDir := filepath.Join(mountPoint, "dir1")
+
+		if err := os.MkdirAll(firstDir, 0o755); err != nil {
+			t.Fatalf("Can't create directory: %v", err)
+		}
+
+		availableSize, err := fs.GetAvailableSize(firstDir)
+		if err != nil {
+			t.Errorf("Can't get available size: %v", err)
+		}
+
+		if availableSize <= 0 {
+			t.Errorf("Expected available memory more than 0")
+		}
+
+		if err := fs.Umount(mountPoint); err != nil {
+			t.Fatalf("Can't umount partition: %v", err)
+		}
+	}
+}
+
 func TestMountPoint(t *testing.T) {
 	type testData struct {
 		mountPointFirst  string
