@@ -4,6 +4,10 @@ github.com/ThalesIgnite/crypto11
 # github.com/cavaliercoder/grab v2.0.0+incompatible
 ## explicit
 github.com/cavaliercoder/grab
+# github.com/coreos/go-systemd/v22 v22.3.2
+## explicit
+github.com/coreos/go-systemd/v22/internal/dlopen
+github.com/coreos/go-systemd/v22/sdjournal
 # github.com/golang-migrate/migrate/v4 v4.14.1
 ## explicit
 github.com/golang-migrate/migrate/v4
