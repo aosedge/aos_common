@@ -7,6 +7,7 @@ replace github.com/ThalesIgnite/crypto11 => github.com/aoscloud/crypto11 v1.0.3-
 require (
 	github.com/ThalesIgnite/crypto11 v1.2.5
 	github.com/cavaliercoder/grab v2.0.0+incompatible
+	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/golang-migrate/migrate/v4 v4.14.1
 	github.com/golang/protobuf v1.5.2
 	github.com/google/go-tpm v0.3.2
