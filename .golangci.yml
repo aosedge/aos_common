@@ -51,3 +51,4 @@ issues:
         - gocognit
         - paralleltest
         - dupl
+        - maintidx
