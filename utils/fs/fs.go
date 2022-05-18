@@ -20,12 +20,15 @@ package fs
 import (
 	"bufio"
 	"context"
+	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
 
+	"github.com/anexia-it/fsquota"
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aoscloud/aos_common/aoserrors"
@@ -191,6 +194,45 @@ func GetDirSize(path string) (size int64, err error) {
 	}
 
 	return size, nil
+}
+
+// GetUserFSQuotaUsage gets file system user usage.
+func GetUserFSQuotaUsage(path string, uid, gid uint32) (byteUsed uint64, err error) {
+	if supported, _ := fsquota.UserQuotasSupported(path); !supported {
+		return byteUsed, nil
+	}
+
+	user := user.User{Uid: fmt.Sprint(uid), Gid: fmt.Sprint(gid)}
+
+	info, err := fsquota.GetUserInfo(path, &user)
+	if err != nil {
+		return byteUsed, aoserrors.Wrap(err)
+	}
+
+	return info.BytesUsed, nil
+}
+
+// SetUserFSQuota sets file system quota for user.
+func SetUserFSQuota(path string, limit uint64, uid, gid uint32) (err error) {
+	supported, _ := fsquota.UserQuotasSupported(path)
+
+	if limit == 0 && !supported {
+		return nil
+	}
+
+	user := user.User{Uid: fmt.Sprint(uid), Gid: fmt.Sprint(gid)}
+
+	log.WithFields(log.Fields{"uid": uid, "gid": uid, "limit": limit}).Debug("Set user FS quota")
+
+	limits := fsquota.Limits{}
+
+	limits.Bytes.SetHard(limit)
+
+	if _, err := fsquota.SetUserQuota(path, &user, limits); err != nil { // nolint
+		return aoserrors.Wrap(err)
+	}
+
+	return nil
 }
 
 /***********************************************************************************************************************
