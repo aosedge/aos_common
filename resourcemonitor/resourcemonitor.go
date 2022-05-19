@@ -416,13 +416,15 @@ func (monitor *ResourceMonitor) getCurrentSystemData() {
 		log.Errorf("Can't get system Disk usage: %s", err)
 	}
 
-	inTraffic, outTraffic, err := monitor.trafficMonitoring.GetSystemTraffic()
-	if err != nil {
-		log.Errorf("Can't get system traffic value: %s", err)
-	}
+	if monitor.trafficMonitoring != nil {
+		inTraffic, outTraffic, err := monitor.trafficMonitoring.GetSystemTraffic()
+		if err != nil {
+			log.Errorf("Can't get system traffic value: %s", err)
+		}
 
-	monitor.globalMonitoringData.InTraffic = inTraffic
-	monitor.globalMonitoringData.OutTraffic = outTraffic
+		monitor.globalMonitoringData.InTraffic = inTraffic
+		monitor.globalMonitoringData.OutTraffic = outTraffic
+	}
 
 	log.WithFields(log.Fields{
 		"CPU":  monitor.globalMonitoringData.CPU,
@@ -452,13 +454,15 @@ func (monitor *ResourceMonitor) getCurrentInstanceData() {
 			log.Errorf("Can't get service Disc usage: %s", err)
 		}
 
-		inTraffic, outTraffic, err := monitor.trafficMonitoring.GetInstanceTraffic(instanceID)
-		if err != nil {
-			log.Errorf("Can't get service traffic: %s", err)
-		}
+		if monitor.trafficMonitoring != nil {
+			inTraffic, outTraffic, err := monitor.trafficMonitoring.GetInstanceTraffic(instanceID)
+			if err != nil {
+				log.Errorf("Can't get service traffic: %s", err)
+			}
 
-		value.monitoringData.InTraffic = inTraffic
-		value.monitoringData.OutTraffic = outTraffic
+			value.monitoringData.InTraffic = inTraffic
+			value.monitoringData.OutTraffic = outTraffic
+		}
 
 		log.WithFields(log.Fields{
 			"id":   instanceID,
