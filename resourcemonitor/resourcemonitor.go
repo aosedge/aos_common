@@ -65,7 +65,7 @@ type AlertSender interface {
 
 // MonitoringSender sends monitoring data.
 type MonitoringSender interface {
-	SendMonitoringData(monitoringData cloudprotocol.MonitoringData) error
+	SendMonitoringData(monitoringData cloudprotocol.MonitoringData)
 }
 
 // TrafficMonitoring interface to get network traffic.
@@ -395,9 +395,7 @@ func (monitor *ResourceMonitor) prepareMonitoringData() cloudprotocol.Monitoring
 }
 
 func (monitor *ResourceMonitor) sendMonitoringData(monitoringData cloudprotocol.MonitoringData) {
-	if err := monitor.monitoringSender.SendMonitoringData(monitoringData); err != nil {
-		log.Errorf("Can't send monitoring data: %v", err)
-	}
+	monitor.monitoringSender.SendMonitoringData(monitoringData)
 }
 
 func (monitor *ResourceMonitor) getCurrentSystemData() {
