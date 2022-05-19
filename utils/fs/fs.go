@@ -174,6 +174,25 @@ func GetAvailableSize(dir string) (availableSize int64, err error) {
 	return int64(stat.Bavail) * stat.Bsize, nil
 }
 
+// GetDirSize returns the size of directory.
+func GetDirSize(path string) (size int64, err error) {
+	if err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		if !info.IsDir() {
+			size += info.Size()
+		}
+
+		return aoserrors.Wrap(err)
+	}); err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return size, nil
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
