@@ -618,10 +618,8 @@ func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
 	sender.alertCallback(alert)
 }
 
-func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudprotocol.MonitoringData) error {
+func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudprotocol.MonitoringData) {
 	sender.monitoringData <- monitoringData
-
-	return nil
 }
 
 /***********************************************************************************************************************
