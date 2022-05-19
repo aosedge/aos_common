@@ -143,6 +143,39 @@ func TestAvailableSize(t *testing.T) {
 	}
 }
 
+func TestGetDirSize(t *testing.T) {
+	partition := disk.Partitions[0]
+
+	mountPoint := path.Join(tmpDir, "mount1")
+
+	if err := fs.Mount(partition.Device, mountPoint, partition.Type, 0, ""); err != nil {
+		t.Fatalf("Can't mount partition: %s", err)
+	}
+
+	firstDir := filepath.Join(mountPoint, "dir1")
+
+	if _, err := fs.GetDirSize(firstDir); err == nil {
+		t.Error("Should be error: not exist directory")
+	}
+
+	if err := createDirContent(firstDir, []string{"file0"}); err != nil {
+		t.Fatalf("Can't create dir content: %s", err)
+	}
+
+	if err := ioutil.WriteFile(path.Join(firstDir, "file0"), []byte("content"), 0o600); err != nil {
+		return
+	}
+
+	size, err := fs.GetDirSize(firstDir)
+	if err != nil {
+		t.Errorf("Can't get directory size: %v", err)
+	}
+
+	if size == 0 {
+		t.Error("Expected non zero directory size")
+	}
+}
+
 func TestMountPoint(t *testing.T) {
 	type testData struct {
 		mountPointFirst  string
