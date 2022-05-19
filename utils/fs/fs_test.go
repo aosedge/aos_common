@@ -152,7 +152,7 @@ func TestGetDirSize(t *testing.T) {
 		t.Fatalf("Can't mount partition: %s", err)
 	}
 
-	firstDir := filepath.Join(mountPoint, "dir1")
+	firstDir := filepath.Join(mountPoint, "dirSize")
 
 	if _, err := fs.GetDirSize(firstDir); err == nil {
 		t.Error("Should be error: not exist directory")
