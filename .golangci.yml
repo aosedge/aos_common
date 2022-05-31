@@ -11,11 +11,23 @@ linters:
     - nestif
     - ireturn
     - gomoddirectives
+    - nonamedreturns
+    - exhaustruct
     # deprecated
     - interfacer
     - golint
     - scopelint
     - maligned
+    - bodyclose
+    - contextcheck
+    - nilerr
+    - noctx
+    - rowserrcheck
+    - sqlclosecheck
+    - structcheck
+    - tparallel
+    - unparam
+    - wastedassign
 
 linters-settings:
   revive:
@@ -36,7 +48,7 @@ linters-settings:
         ignored-numbers: 0o600,0o755,2,10,1000,16,32,64,128
 
   gofumpt:
-    lang-version: "1.14"
+    lang-version: "1.18"
 
 issues:
   include:

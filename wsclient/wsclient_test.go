@@ -583,7 +583,8 @@ func (handler *testHandler) ClientConnected(client *wsserver.Client) {
 }
 
 func (handler *testHandler) ProcessMessage(
-	client *wsserver.Client, messageType int, message []byte) (response []byte, err error) {
+	client *wsserver.Client, messageType int, message []byte,
+) (response []byte, err error) {
 	response, err = handler.processMessage(client, messageType, message)
 
 	return response, aoserrors.Wrap(err)

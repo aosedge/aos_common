@@ -503,8 +503,9 @@ func testMigration(t *testing.T, currentVersion uint, nextVersion uint) {
 	}
 }
 
-func startMigrationRoutine(name string, migrationPath string, mergedMigrationPath string,
-	version uint) (sqlite *sql.DB, err error) {
+func startMigrationRoutine(
+	name string, migrationPath string, mergedMigrationPath string, version uint,
+) (sqlite *sql.DB, err error) {
 	// Check and create db
 	if _, err = os.Stat(filepath.Dir(name)); err != nil {
 		if !os.IsNotExist(err) {
