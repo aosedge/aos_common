@@ -139,9 +139,8 @@ func TestUntarGZArchive(t *testing.T) {
 	// compare source dir and untarred dir
 	command = exec.Command("git", "diff", "--no-index", path.Join(workDir, "archive_folder"),
 		path.Join(workDir, "outfolder"))
-	out, _ := command.Output()
 
-	if string(out) != "" {
+	if out, _ := command.Output(); string(out) != "" {
 		t.Errorf("Untar content not identical")
 	}
 }
