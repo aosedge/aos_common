@@ -26,6 +26,7 @@ type SMServiceClient interface {
 	// Services
 	GetServicesStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*ServicesStatus, error)
 	InstallService(ctx context.Context, in *InstallServiceRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	RestoreService(ctx context.Context, in *RestoreServiceRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	RemoveService(ctx context.Context, in *RemoveServiceRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	RunInstances(ctx context.Context, in *RunInstancesRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	InstanceStateAcceptance(ctx context.Context, in *StateAcceptance, opts ...grpc.CallOption) (*empty.Empty, error)
@@ -89,6 +90,15 @@ func (c *sMServiceClient) GetServicesStatus(ctx context.Context, in *empty.Empty
 func (c *sMServiceClient) InstallService(ctx context.Context, in *InstallServiceRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
 	out := new(empty.Empty)
 	err := c.cc.Invoke(ctx, "/servicemanager.v2.SMService/InstallService", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sMServiceClient) RestoreService(ctx context.Context, in *RestoreServiceRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/servicemanager.v2.SMService/RestoreService", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -228,6 +238,7 @@ type SMServiceServer interface {
 	// Services
 	GetServicesStatus(context.Context, *empty.Empty) (*ServicesStatus, error)
 	InstallService(context.Context, *InstallServiceRequest) (*empty.Empty, error)
+	RestoreService(context.Context, *RestoreServiceRequest) (*empty.Empty, error)
 	RemoveService(context.Context, *RemoveServiceRequest) (*empty.Empty, error)
 	RunInstances(context.Context, *RunInstancesRequest) (*empty.Empty, error)
 	InstanceStateAcceptance(context.Context, *StateAcceptance) (*empty.Empty, error)
@@ -263,6 +274,9 @@ func (UnimplementedSMServiceServer) GetServicesStatus(context.Context, *empty.Em
 }
 func (UnimplementedSMServiceServer) InstallService(context.Context, *InstallServiceRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InstallService not implemented")
+}
+func (UnimplementedSMServiceServer) RestoreService(context.Context, *RestoreServiceRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreService not implemented")
 }
 func (UnimplementedSMServiceServer) RemoveService(context.Context, *RemoveServiceRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RemoveService not implemented")
@@ -396,6 +410,24 @@ func _SMService_InstallService_Handler(srv interface{}, ctx context.Context, dec
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(SMServiceServer).InstallService(ctx, req.(*InstallServiceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SMService_RestoreService_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreServiceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SMServiceServer).RestoreService(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/servicemanager.v2.SMService/RestoreService",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SMServiceServer).RestoreService(ctx, req.(*RestoreServiceRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -627,6 +659,10 @@ var SMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InstallService",
 			Handler:    _SMService_InstallService_Handler,
+		},
+		{
+			MethodName: "RestoreService",
+			Handler:    _SMService_RestoreService_Handler,
 		},
 		{
 			MethodName: "RemoveService",
