@@ -24,6 +24,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/x509"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -31,6 +32,7 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"reflect"
 	"testing"
 
 	"github.com/aoscloud/aos_common/aoserrors"
@@ -220,29 +222,77 @@ func TestSaveKey(t *testing.T) {
 }
 
 func TestCertificate(t *testing.T) {
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	caTemplate := getCA()
+
+	caCert, caPriv, err := testtools.GenerateCertAndKey(caTemplate, caTemplate, nil)
 	if err != nil {
-		t.Fatalf("Can't generate key: %s", err)
+		t.Fatalf("Can't generate CA certificate: %v", err)
 	}
 
-	csr, err := testtools.CreateCSR(key)
-	if err != nil {
-		t.Fatalf("Can't create CSR: %s", err)
+	template := testtools.DefaultCertificateTemplate
+	template.Subject.CommonName = "AoS message-handler"
+	template.IsCA = false
+
+	caPrivRSA, ok := caPriv.(*rsa.PrivateKey)
+	if !ok {
+		t.Fatalf("Can't convert crypto to RSA private key")
 	}
 
-	initialCert, err := testtools.CreateCertificate(tmpDir, csr)
+	cert, key, err := testtools.GenerateCertAndKey(&template, caCert, caPrivRSA)
 	if err != nil {
-		t.Fatalf("Can't create certificate: %s", err)
+		t.Fatalf("Can't generate certificate: %v", err)
 	}
 
-	fileName, err := savePEMFile(initialCert)
+	certPem := cryptutils.CertToPEM(cert)
+
+	fileName, err := savePEMFile(certPem)
 	if err != nil {
-		t.Fatalf("Can't save PRM file: %s", err)
+		t.Fatalf("Can't save PRM file: %v", err)
 	}
 
 	x509Cert, err := cryptutils.LoadCertificateFromFile(fileName)
 	if err != nil {
-		t.Fatalf("Can't load certificate: %s", err)
+		t.Fatalf("Can't load certificate: %v", err)
+	}
+
+	if len(x509Cert) != 1 {
+		t.Fatal("Unexpected count certificate chain")
+	}
+
+	if template.Subject.CommonName != x509Cert[0].Subject.CommonName {
+		t.Error("Unexpected subject common name")
+	}
+
+	if !reflect.DeepEqual(template.Subject.Organization, x509Cert[0].Subject.Organization) {
+		t.Error("Unexpected subject organization")
+	}
+
+	if !reflect.DeepEqual(template.Subject.OrganizationalUnit, x509Cert[0].Subject.OrganizationalUnit) {
+		t.Error("Unexpected subject organization unit")
+	}
+
+	if !reflect.DeepEqual(template.Subject.OrganizationalUnit, x509Cert[0].Subject.OrganizationalUnit) {
+		t.Error("Unexpected subject organization unit")
+	}
+
+	if !reflect.DeepEqual(template.ExtKeyUsage, x509Cert[0].ExtKeyUsage) {
+		t.Error("Unexpected extended key usages")
+	}
+
+	if template.KeyUsage != x509Cert[0].KeyUsage {
+		t.Error("Unexpected key usages")
+	}
+
+	if !reflect.DeepEqual(template.DNSNames, x509Cert[0].DNSNames) {
+		t.Error("Unexpected dns names")
+	}
+
+	if !reflect.DeepEqual(template.IPAddresses, x509Cert[0].IPAddresses) {
+		t.Error("Unexpected ip addresses")
+	}
+
+	if x509Cert[0].IsCA {
+		t.Error("Should not be ca certificate")
 	}
 
 	if err = cryptutils.CheckCertificate(x509Cert[0], key); err != nil {
@@ -260,29 +310,39 @@ func TestCertificate(t *testing.T) {
 		t.Fatalf("Can't read file: %s", err)
 	}
 
-	if !bytes.Equal(initialCert, storedCert) {
+	if !bytes.Equal(certPem, storedCert) {
 		t.Fatal("Cert data mismatch")
 	}
 }
 
 func TestGetTLSConfig(t *testing.T) {
+	caTemplate := getCA()
+
+	caCert, caPriv, err := testtools.GenerateCertAndKey(caTemplate, caTemplate, nil)
+	if err != nil {
+		t.Fatalf("Can't generate CA certificate: %v", err)
+	}
+
+	template := testtools.DefaultCertificateTemplate
+	template.IsCA = false
+	template.Subject.CommonName = "AoS message-handler"
+
+	caPrivRSA, ok := caPriv.(*rsa.PrivateKey)
+	if !ok {
+		t.Fatalf("Can't convert crypto to RSA private key")
+	}
+
+	cert, key, err := testtools.GenerateCertAndKey(&template, caCert, caPrivRSA)
+	if err != nil {
+		t.Fatalf("Can't generate certificate: %v", err)
+	}
+
 	tlsDir, err := ioutil.TempDir(tmpDir, "tlsconfig")
 	if err != nil {
 		t.Fatalf("Can't create TLS config dir: %s", err)
 	}
 
 	defer os.RemoveAll(tlsDir)
-
-	rootCAPath := path.Join(tlsDir, "root."+cryptutils.PEMExt)
-
-	if err = ioutil.WriteFile(rootCAPath, testtools.GetCACertificate(), 0o600); err != nil {
-		t.Fatalf("Can't save certificate: %s", err)
-	}
-
-	key, err := rsa.GenerateKey(rand.Reader, 2048)
-	if err != nil {
-		t.Fatalf("Can't generate key: %s", err)
-	}
 
 	keyURL := url.URL{
 		Scheme: cryptutils.SchemeFile,
@@ -293,27 +353,18 @@ func TestGetTLSConfig(t *testing.T) {
 		t.Fatalf("Can't save certificate: %s", err)
 	}
 
-	csr, err := testtools.CreateCSR(key)
-	if err != nil {
-		t.Fatalf("Can't create CSR: %s", err)
-	}
-
-	cert, err := testtools.CreateCertificate(tmpDir, csr)
-	if err != nil {
-		t.Fatalf("Can't create certificate: %s", err)
-	}
-
-	x509Cert, err := cryptutils.PEMToX509Cert(cert)
-	if err != nil {
-		t.Fatalf("Can't parse certificate: %s", err)
-	}
-
 	certURL := url.URL{
 		Scheme: cryptutils.SchemeFile,
 		Path:   path.Join(tlsDir, "cert."+cryptutils.PEMExt),
 	}
 
-	if err = cryptutils.SaveCertificateToFile(certURL.Path, x509Cert); err != nil {
+	if err = cryptutils.SaveCertificateToFile(certURL.Path, []*x509.Certificate{cert}); err != nil {
+		t.Fatalf("Can't save certificate: %s", err)
+	}
+
+	rootCAPath := path.Join(tlsDir, "root."+cryptutils.PEMExt)
+
+	if err = ioutil.WriteFile(rootCAPath, cryptutils.CertToPEM(caCert), 0o600); err != nil {
 		t.Fatalf("Can't save certificate: %s", err)
 	}
 
@@ -356,4 +407,13 @@ func savePEMFile(data []byte) (fileName string, err error) {
 	}
 
 	return file.Name(), nil
+}
+
+func getCA() *x509.Certificate {
+	caCert := testtools.DefaultCertificateTemplate
+
+	caCert.IsCA = true
+	caCert.SubjectKeyId = []byte{1, 2, 3, 4}
+
+	return &caCert
 }
