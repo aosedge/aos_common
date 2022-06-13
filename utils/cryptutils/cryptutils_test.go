@@ -25,6 +25,8 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -229,9 +231,27 @@ func TestCertificate(t *testing.T) {
 		t.Fatalf("Can't generate CA certificate: %v", err)
 	}
 
+	// Issuer Alternative Name
+	testObjectOid := asn1.ObjectIdentifier{2, 5, 29, 18}
+
+	rawValues := []asn1.RawValue{
+		{Class: asn1.ClassContextSpecific, Tag: asn1.TagOID, Bytes: []byte("https://myurl.com/")},
+	}
+
+	values, err := asn1.Marshal(rawValues)
+	if err != nil {
+		t.Fatalf("Can't generate certificate URL extension: %v", err)
+	}
+
 	template := testtools.DefaultCertificateTemplate
 	template.Subject.CommonName = "AoS message-handler"
 	template.IsCA = false
+	template.ExtraExtensions = []pkix.Extension{
+		{
+			Id:    testObjectOid,
+			Value: values,
+		},
+	}
 
 	caPrivRSA, ok := caPriv.(*rsa.PrivateKey)
 	if !ok {
@@ -293,6 +313,47 @@ func TestCertificate(t *testing.T) {
 
 	if x509Cert[0].IsCA {
 		t.Error("Should not be ca certificate")
+	}
+
+	found := false
+
+	for _, ext := range x509Cert[0].Extensions {
+		if !testObjectOid.Equal(ext.Id) {
+			continue
+		}
+
+		var seq asn1.RawValue
+
+		rest, err := asn1.Unmarshal(ext.Value, &seq)
+		if err != nil {
+			t.Fatalf("Can't parse extension value")
+		}
+
+		if len(rest) != 0 {
+			t.Fatal("x509: trailing data after X.509 authority information")
+		}
+
+		var v asn1.RawValue
+
+		if _, err = asn1.Unmarshal(seq.Bytes, &v); err != nil {
+			t.Fatalf("Can't unmarshal value: %v", err)
+		}
+
+		if v.Tag != asn1.TagOID {
+			t.Error("Unexpected tag index")
+		}
+
+		if string(v.Bytes) != "https://myurl.com/" {
+			t.Error("Unexpected value")
+		}
+
+		found = true
+
+		break
+	}
+
+	if !found {
+		t.Fatalf("Can't found oid: %v", testObjectOid)
 	}
 
 	if err = cryptutils.CheckCertificate(x509Cert[0], key); err != nil {
