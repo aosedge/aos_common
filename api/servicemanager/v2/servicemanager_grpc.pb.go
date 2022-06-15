@@ -35,6 +35,8 @@ type SMServiceClient interface {
 	// Layers
 	GetLayersStatus(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*LayersStatus, error)
 	InstallLayer(ctx context.Context, in *InstallLayerRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	RemoveLayer(ctx context.Context, in *RemoveLayerRequest, opts ...grpc.CallOption) (*empty.Empty, error)
+	RestoreLayer(ctx context.Context, in *RestoreLayerRequest, opts ...grpc.CallOption) (*empty.Empty, error)
 	// Notifications
 	SubscribeSMNotifications(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SMService_SubscribeSMNotificationsClient, error)
 	// Logs
@@ -168,6 +170,24 @@ func (c *sMServiceClient) InstallLayer(ctx context.Context, in *InstallLayerRequ
 	return out, nil
 }
 
+func (c *sMServiceClient) RemoveLayer(ctx context.Context, in *RemoveLayerRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/servicemanager.v2.SMService/RemoveLayer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *sMServiceClient) RestoreLayer(ctx context.Context, in *RestoreLayerRequest, opts ...grpc.CallOption) (*empty.Empty, error) {
+	out := new(empty.Empty)
+	err := c.cc.Invoke(ctx, "/servicemanager.v2.SMService/RestoreLayer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *sMServiceClient) SubscribeSMNotifications(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (SMService_SubscribeSMNotificationsClient, error) {
 	stream, err := c.cc.NewStream(ctx, &SMService_ServiceDesc.Streams[0], "/servicemanager.v2.SMService/SubscribeSMNotifications", opts...)
 	if err != nil {
@@ -247,6 +267,8 @@ type SMServiceServer interface {
 	// Layers
 	GetLayersStatus(context.Context, *empty.Empty) (*LayersStatus, error)
 	InstallLayer(context.Context, *InstallLayerRequest) (*empty.Empty, error)
+	RemoveLayer(context.Context, *RemoveLayerRequest) (*empty.Empty, error)
+	RestoreLayer(context.Context, *RestoreLayerRequest) (*empty.Empty, error)
 	// Notifications
 	SubscribeSMNotifications(*empty.Empty, SMService_SubscribeSMNotificationsServer) error
 	// Logs
@@ -298,6 +320,12 @@ func (UnimplementedSMServiceServer) GetLayersStatus(context.Context, *empty.Empt
 }
 func (UnimplementedSMServiceServer) InstallLayer(context.Context, *InstallLayerRequest) (*empty.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method InstallLayer not implemented")
+}
+func (UnimplementedSMServiceServer) RemoveLayer(context.Context, *RemoveLayerRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RemoveLayer not implemented")
+}
+func (UnimplementedSMServiceServer) RestoreLayer(context.Context, *RestoreLayerRequest) (*empty.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RestoreLayer not implemented")
 }
 func (UnimplementedSMServiceServer) SubscribeSMNotifications(*empty.Empty, SMService_SubscribeSMNotificationsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeSMNotifications not implemented")
@@ -558,6 +586,42 @@ func _SMService_InstallLayer_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _SMService_RemoveLayer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RemoveLayerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SMServiceServer).RemoveLayer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/servicemanager.v2.SMService/RemoveLayer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SMServiceServer).RemoveLayer(ctx, req.(*RemoveLayerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _SMService_RestoreLayer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RestoreLayerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(SMServiceServer).RestoreLayer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/servicemanager.v2.SMService/RestoreLayer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(SMServiceServer).RestoreLayer(ctx, req.(*RestoreLayerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _SMService_SubscribeSMNotifications_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(empty.Empty)
 	if err := stream.RecvMsg(m); err != nil {
@@ -691,6 +755,14 @@ var SMService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "InstallLayer",
 			Handler:    _SMService_InstallLayer_Handler,
+		},
+		{
+			MethodName: "RemoveLayer",
+			Handler:    _SMService_RemoveLayer_Handler,
+		},
+		{
+			MethodName: "RestoreLayer",
+			Handler:    _SMService_RestoreLayer_Handler,
 		},
 		{
 			MethodName: "GetSystemLog",
