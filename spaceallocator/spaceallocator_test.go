@@ -18,12 +18,16 @@
 package spaceallocator_test
 
 import (
+	"bytes"
 	"errors"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"testing"
+	"time"
 
 	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/spaceallocator"
@@ -94,7 +98,7 @@ func TestMain(m *testing.M) {
 func TestAllocate(t *testing.T) {
 	mountPoint := filepath.Join(tmpDir, "test")
 
-	disk, err := newTestDisk(mountPoint, 1)
+	disk, err := newTestDisk(mountPoint, 1, nil)
 	if err != nil {
 		t.Fatalf("Can't create test disk: %v", err)
 	}
@@ -175,7 +179,7 @@ func TestAllocate(t *testing.T) {
 func TestMultipleAllocators(t *testing.T) {
 	mountPoint := filepath.Join(tmpDir, "test")
 
-	disk, err := newTestDisk(mountPoint, 1)
+	disk, err := newTestDisk(mountPoint, 1, nil)
 	if err != nil {
 		t.Fatalf("Can't create test disk: %v", err)
 	}
@@ -236,11 +240,131 @@ func TestMultipleAllocators(t *testing.T) {
 	}
 }
 
+func TestOutdatedItems(t *testing.T) {
+	type testFile struct {
+		name      string
+		size      uint64
+		timestamp time.Time
+	}
+
+	timestamp := time.Now()
+
+	// Total outdated files 768 Kb, clean part ~900 Kb, available 123 Kb
+	outdatedFiles := []testFile{
+		{name: "file1.data", size: 128 * kilobyte, timestamp: timestamp.Add(-1 * time.Hour)},
+		{name: "file2.data", size: 32 * kilobyte, timestamp: timestamp.Add(-6 * time.Hour)},
+		{name: "file3.data", size: 64 * kilobyte, timestamp: timestamp.Add(-5 * time.Hour)},
+		{name: "file4.data", size: 256 * kilobyte, timestamp: timestamp.Add(-4 * time.Hour)},
+		{name: "file5.data", size: 32 * kilobyte, timestamp: timestamp.Add(-2 * time.Hour)},
+		{name: "file6.data", size: 256 * kilobyte, timestamp: timestamp.Add(-3 * time.Hour)},
+	}
+
+	mountPoint := filepath.Join(tmpDir, "test")
+
+	disk, err := newTestDisk(mountPoint, 1, func(mountPoint string) error {
+		for _, outdatedFile := range outdatedFiles {
+			file, err := os.Create(filepath.Join(mountPoint, outdatedFile.name))
+			if err != nil {
+				return aoserrors.Wrap(err)
+			}
+
+			buffer := bytes.NewBuffer(make([]byte, outdatedFile.size))
+
+			if _, err := io.Copy(file, buffer); err != nil {
+				return aoserrors.Wrap(err)
+			}
+
+			file.Close()
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Can't create test disk: %v", err)
+	}
+
+	defer disk.close()
+
+	removedFiles := make([]string, 0)
+
+	allocator, err := spaceallocator.New(mountPoint, 0, func(id string) error {
+		removedFiles = append(removedFiles, id)
+
+		if err := os.RemoveAll(filepath.Join(mountPoint, id)); err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Can't create allocator: %v", err)
+	}
+	defer allocator.Close()
+
+	for _, outdatedFile := range outdatedFiles {
+		if err := allocator.AddOutdatedItem(
+			outdatedFile.name, outdatedFile.size, outdatedFile.timestamp); err != nil {
+			t.Fatalf("Can't add outdated item: %s", err)
+		}
+	}
+
+	// Need more 132 - 256 ~
+	space, err := allocator.AllocateSpace(256 * kilobyte)
+	if err != nil {
+		t.Fatalf("Can't allocate space: %v", err)
+	}
+
+	// file2.dat, file3.dat, file4.dat should be removed: 32 + 64 + 256
+	if !reflect.DeepEqual(removedFiles, []string{outdatedFiles[1].name, outdatedFiles[2].name, outdatedFiles[3].name}) {
+		t.Errorf("Wrong files removed: %v", removedFiles)
+	}
+
+	if err = space.Release(); err != nil {
+		t.Errorf("Can't release space: %v", err)
+	}
+
+	// Check allocate more than can be freed
+
+	removedFiles = nil
+
+	if _, err := allocator.AllocateSpace(1024 * kilobyte); !errors.Is(err, spaceallocator.ErrNoSpace) {
+		t.Errorf("Wrong allocator error: %v", err)
+	}
+
+	if removedFiles != nil {
+		t.Errorf("Wrong files removed: %v", removedFiles)
+	}
+
+	// Check restore outdated files
+
+	for _, id := range []string{outdatedFiles[0].name, outdatedFiles[4].name, outdatedFiles[5].name} {
+		allocator.RestoreOutdatedItem(id)
+	}
+
+	if _, err := allocator.AllocateSpace(512 * kilobyte); !errors.Is(err, spaceallocator.ErrNoSpace) {
+		t.Errorf("Wrong allocator error: %v", err)
+	}
+
+	// Check add outdated files without remover
+
+	allocatorWORemoved, err := spaceallocator.New(mountPoint, 0, nil)
+	if err != nil {
+		t.Fatalf("Can't create allocator: %v", err)
+	}
+	defer allocatorWORemoved.Close()
+
+	if err := allocatorWORemoved.AddOutdatedItem("testItem", 1024, time.Now()); err == nil {
+		t.Error("Error should be returned")
+	}
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-func newTestDisk(mountPoint string, sizeMB uint64) (disk *testDisk, err error) {
+func newTestDisk(
+	mountPoint string, sizeMB uint64, contentCreator func(mountPoint string) error,
+) (disk *testDisk, err error) {
 	file, err := os.CreateTemp(tmpDir, "*.ext4")
 	if err != nil {
 		return nil, aoserrors.Wrap(err)
@@ -264,7 +388,7 @@ func newTestDisk(mountPoint string, sizeMB uint64) (disk *testDisk, err error) {
 		}
 	}()
 
-	if err = testtools.CreateFilePartition(file.Name(), "ext4", sizeMB, nil, false); err != nil {
+	if err = testtools.CreateFilePartition(file.Name(), "ext4", sizeMB, contentCreator, false); err != nil {
 		return nil, aoserrors.Wrap(err)
 	}
 

@@ -20,6 +20,7 @@ package spaceallocator
 
 import (
 	"errors"
+	"sort"
 	"sync"
 	"time"
 
@@ -34,8 +35,9 @@ import (
 
 // Allocator space allocator.
 type Allocator struct {
-	path string
-	part *partition
+	path    string
+	part    *partition
+	remover ItemRemover
 }
 
 // Space allocated space.
@@ -55,7 +57,17 @@ type partition struct {
 	allocatorCount  uint
 	allocationCount uint
 	availableSize   uint64
+	outdatedItems   []outdatedItem
 }
+
+type outdatedItem struct {
+	id        string
+	size      uint64
+	timestamp time.Time
+	remove    ItemRemover
+}
+
+type byTimestamp []outdatedItem
 
 /***********************************************************************************************************************
  * Vars
@@ -101,8 +113,9 @@ func New(path string, partLimit uint, remover ItemRemover) (*Allocator, error) {
 	part.allocatorCount++
 
 	return &Allocator{
-		path: path,
-		part: part,
+		path:    path,
+		part:    part,
+		remover: remover,
 	}, nil
 }
 
@@ -163,12 +176,33 @@ func (allocator *Allocator) FreeSpace(size uint64) {
 // oldest item should be removed first. After calling ItemRemover the item is automatically removed from outdated
 // item list.
 func (allocator *Allocator) AddOutdatedItem(id string, size uint64, timestamp time.Time) error {
+	log.WithFields(log.Fields{
+		"path": allocator.path, "id": id, "size": size, "timestamp": timestamp,
+	}).Debug("Add outdated item")
+
+	if allocator.remover == nil {
+		return aoserrors.New("no item remover")
+	}
+
+	allocator.part.addOutdatedItem(outdatedItem{id: id, size: size, remove: allocator.remover, timestamp: timestamp})
+
 	return nil
 }
 
 // RestoreOutdatedItem removes item from outdated item list.
 func (allocator *Allocator) RestoreOutdatedItem(id string) {
+	log.WithFields(log.Fields{"path": allocator.path, "id": id}).Debug("Restore outdated item")
+
+	allocator.part.restoreOutdatedItem(id)
 }
+
+/***********************************************************************************************************************
+ * byTimestamp
+ **********************************************************************************************************************/
+
+func (items byTimestamp) Len() int           { return len(items) }
+func (items byTimestamp) Less(i, j int) bool { return items[i].timestamp.Before(items[j].timestamp) }
+func (items byTimestamp) Swap(i, j int)      { items[i], items[j] = items[j], items[i] }
 
 /***********************************************************************************************************************
  * Private
@@ -192,7 +226,12 @@ func (part *partition) allocateSpace(size uint64) error {
 	}
 
 	if size > part.availableSize {
-		return ErrNoSpace
+		freedSize, err := part.removeOutdatedItems(size - part.availableSize)
+		if err != nil {
+			return err
+		}
+
+		part.availableSize += freedSize
 	}
 
 	part.availableSize -= size
@@ -229,4 +268,74 @@ func (part *partition) allocateDone() error {
 	part.allocationCount--
 
 	return nil
+}
+
+func (part *partition) addOutdatedItem(item outdatedItem) {
+	part.Lock()
+	defer part.Unlock()
+
+	i := 0
+
+	for ; i < len(part.outdatedItems); i++ {
+		if part.outdatedItems[i].id == item.id {
+			part.outdatedItems[i] = item
+
+			break
+		}
+	}
+
+	if i == len(part.outdatedItems) {
+		part.outdatedItems = append(part.outdatedItems, item)
+	}
+}
+
+func (part *partition) restoreOutdatedItem(id string) {
+	part.Lock()
+	defer part.Unlock()
+
+	for i, item := range part.outdatedItems {
+		if item.id == id {
+			part.outdatedItems = append(part.outdatedItems[:i], part.outdatedItems[i+1:]...)
+
+			break
+		}
+	}
+}
+
+func (part *partition) removeOutdatedItems(requiredSize uint64) (freedSize uint64, err error) {
+	var totalSize uint64
+
+	for _, item := range part.outdatedItems {
+		totalSize += item.size
+	}
+
+	if requiredSize > totalSize {
+		return 0, ErrNoSpace
+	}
+
+	log.WithFields(log.Fields{
+		"mountPoint": part.mountPoint, "requiredSize": requiredSize,
+	}).Debug("Remove outdated items")
+
+	sort.Sort(byTimestamp(part.outdatedItems))
+
+	i := 0
+
+	for ; freedSize < requiredSize; i++ {
+		item := part.outdatedItems[i]
+
+		log.WithFields(log.Fields{
+			"mountPoint": part.mountPoint, "id": item.id, "size": item.size,
+		}).Debug("Remove outdated item")
+
+		if err = item.remove(item.id); err != nil {
+			return freedSize, err
+		}
+
+		freedSize += item.size
+	}
+
+	part.outdatedItems = part.outdatedItems[i:]
+
+	return freedSize, nil
 }
