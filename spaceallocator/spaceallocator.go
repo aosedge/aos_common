@@ -35,16 +35,22 @@ import (
 
 // Allocator space allocator.
 type Allocator struct {
-	path    string
-	part    *partition
-	remover ItemRemover
+	sync.Mutex
+
+	path            string
+	partLimit       uint
+	part            *partition
+	remover         ItemRemover
+	sizeLimit       uint64
+	allocationCount uint
+	allocatedSize   uint64
 }
 
 // Space allocated space.
 type Space struct {
-	size uint64
-	path string
-	part *partition
+	size      uint64
+	path      string
+	allocator *Allocator
 }
 
 // ItemRemover requests to remove item in order to free space.
@@ -58,13 +64,15 @@ type partition struct {
 	allocationCount uint
 	availableSize   uint64
 	outdatedItems   []outdatedItem
+	partLimit       uint
+	totalSize       uint64
 }
 
 type outdatedItem struct {
 	id        string
 	size      uint64
 	timestamp time.Time
-	remove    ItemRemover
+	allocator *Allocator
 }
 
 type byTimestamp []outdatedItem
@@ -106,60 +114,101 @@ func New(path string, partLimit uint, remover ItemRemover) (*Allocator, error) {
 			partsMap = make(map[string]*partition)
 		}
 
-		part = &partition{mountPoint: mountPoint}
+		if part, err = newPart(mountPoint); err != nil {
+			return nil, err
+		}
+
 		partsMap[mountPoint] = part
+	}
+
+	if err := part.addPartLimit(partLimit); err != nil {
+		return nil, err
 	}
 
 	part.allocatorCount++
 
-	return &Allocator{
-		path:    path,
-		part:    part,
-		remover: remover,
-	}, nil
+	allocator := &Allocator{
+		path:      path,
+		partLimit: partLimit,
+		part:      part,
+		remover:   remover,
+	}
+
+	if partLimit != 0 {
+		allocator.sizeLimit = part.totalSize * uint64(partLimit) / 100
+	}
+
+	return allocator, nil
 }
 
 // Close closes space allocator.
-func (allocator *Allocator) Close() error {
+func (allocator *Allocator) Close() (err error) {
 	partsMutex.Lock()
 	defer partsMutex.Unlock()
 
 	log.WithFields(log.Fields{"path": allocator.path}).Debug("Close allocator")
 
+	if partLimitErr := allocator.part.removePartLimit(allocator.partLimit); partLimitErr != nil {
+		err = partLimitErr
+	}
+
 	allocator.part.allocatorCount--
 
 	if allocator.part.allocatorCount == 0 {
+		log.WithFields(log.Fields{"mountPoint": allocator.part.mountPoint}).Debug("Close space allocation partition")
+
 		delete(partsMap, allocator.part.mountPoint)
 	}
 
-	return nil
+	return err
 }
 
 // AllocateSpace allocates space in storage.
 func (allocator *Allocator) AllocateSpace(size uint64) (*Space, error) {
 	log.WithFields(log.Fields{"path": allocator.path, "size": size}).Debug("Allocate space")
 
+	if err := allocator.allocateSpace(size); err != nil {
+		return nil, err
+	}
+
 	if err := allocator.part.allocateSpace(size); err != nil {
 		return nil, err
 	}
 
-	return &Space{size: size, path: allocator.path, part: allocator.part}, nil
+	return &Space{size: size, path: allocator.path, allocator: allocator}, nil
 }
 
 // Accept accepts previously allocated space.
 func (space *Space) Accept() error {
 	log.WithFields(log.Fields{"path": space.path, "size": space.size}).Debug("Space accepted")
 
-	return space.part.allocateDone()
+	if err := space.allocator.allocateDone(); err != nil {
+		return err
+	}
+
+	if err := space.allocator.part.allocateDone(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // Release releases previously allocated space.
 func (space *Space) Release() error {
 	log.WithFields(log.Fields{"path": space.path, "size": space.size}).Debug("Space released")
 
-	space.part.freeSpace(space.size)
+	space.allocator.freeSpace(space.size)
+	space.allocator.part.freeSpace(space.size)
 
-	return space.part.allocateDone()
+	if err := space.allocator.allocateDone(); err != nil {
+		return err
+	}
+
+	if err := space.allocator.part.allocateDone(); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // FreeSpace frees space in storage.
@@ -167,6 +216,7 @@ func (space *Space) Release() error {
 func (allocator *Allocator) FreeSpace(size uint64) {
 	log.WithFields(log.Fields{"path": allocator.path, "size": size}).Debug("Free space")
 
+	allocator.freeSpace(size)
 	allocator.part.freeSpace(size)
 }
 
@@ -184,7 +234,7 @@ func (allocator *Allocator) AddOutdatedItem(id string, size uint64, timestamp ti
 		return aoserrors.New("no item remover")
 	}
 
-	allocator.part.addOutdatedItem(outdatedItem{id: id, size: size, remove: allocator.remover, timestamp: timestamp})
+	allocator.part.addOutdatedItem(outdatedItem{id: id, size: size, allocator: allocator, timestamp: timestamp})
 
 	return nil
 }
@@ -207,6 +257,102 @@ func (items byTimestamp) Swap(i, j int)      { items[i], items[j] = items[j], it
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
+
+func (allocator *Allocator) allocateSpace(size uint64) error {
+	if allocator.sizeLimit == 0 {
+		return nil
+	}
+
+	allocator.Lock()
+	defer allocator.Unlock()
+
+	if allocator.allocationCount == 0 {
+		allocatedSize, err := fs.GetDirSize(allocator.path)
+		if err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		allocator.allocatedSize = uint64(allocatedSize)
+
+		log.WithFields(log.Fields{
+			"path": allocator.path, "size": allocator.allocatedSize,
+		}).Debug("Initial allocated space")
+	}
+
+	if allocator.sizeLimit > 0 && allocator.allocatedSize+size > allocator.sizeLimit {
+		return ErrNoSpace
+	}
+
+	allocator.allocatedSize += size
+	allocator.allocationCount++
+
+	log.WithFields(log.Fields{
+		"path": allocator.path, "size": allocator.allocatedSize,
+	}).Debug("Total allocated space")
+
+	return nil
+}
+
+func (allocator *Allocator) freeSpace(size uint64) {
+	if allocator.sizeLimit == 0 {
+		return
+	}
+
+	allocator.Lock()
+	defer allocator.Unlock()
+
+	if allocator.allocationCount > 0 {
+		if size < allocator.allocatedSize {
+			allocator.allocatedSize -= size
+		} else {
+			allocator.allocatedSize = 0
+		}
+
+		log.WithFields(log.Fields{
+			"path": allocator.path, "size": allocator.allocatedSize,
+		}).Debug("Total allocated space")
+	}
+}
+
+func (allocator *Allocator) allocateDone() error {
+	if allocator.sizeLimit == 0 {
+		return nil
+	}
+
+	allocator.Lock()
+	defer allocator.Unlock()
+
+	if allocator.allocationCount == 0 {
+		return ErrNoAllocation
+	}
+
+	allocator.allocationCount--
+
+	return nil
+}
+
+func (allocator *Allocator) removeOutdatedItem(item outdatedItem) error {
+	if err := allocator.remover(item.id); err != nil {
+		return err
+	}
+
+	allocator.freeSpace(item.size)
+
+	return nil
+}
+
+func newPart(mountPoint string) (*partition, error) {
+	totalSize, err := fs.GetTotalSize(mountPoint)
+	if err != nil {
+		return nil, aoserrors.Wrap(err)
+	}
+
+	log.WithFields(log.Fields{
+		"mountPoint": mountPoint, "totalSize": totalSize,
+	}).Debug("Create space allocation partition")
+
+	return &partition{mountPoint: mountPoint, totalSize: uint64(totalSize)}, nil
+}
 
 func (part *partition) allocateSpace(size uint64) error {
 	part.Lock()
@@ -328,7 +474,7 @@ func (part *partition) removeOutdatedItems(requiredSize uint64) (freedSize uint6
 			"mountPoint": part.mountPoint, "id": item.id, "size": item.size,
 		}).Debug("Remove outdated item")
 
-		if err = item.remove(item.id); err != nil {
+		if err = item.allocator.removeOutdatedItem(item); err != nil {
 			return freedSize, err
 		}
 
@@ -338,4 +484,24 @@ func (part *partition) removeOutdatedItems(requiredSize uint64) (freedSize uint6
 	part.outdatedItems = part.outdatedItems[i:]
 
 	return freedSize, nil
+}
+
+func (part *partition) addPartLimit(partLimit uint) error {
+	if part.partLimit+partLimit > 100 {
+		return aoserrors.New("total part limit exceeds")
+	}
+
+	part.partLimit += partLimit
+
+	return nil
+}
+
+func (part *partition) removePartLimit(partLimit uint) error {
+	if part.partLimit < partLimit {
+		return aoserrors.New("can't remove part limit")
+	}
+
+	part.partLimit -= partLimit
+
+	return nil
 }

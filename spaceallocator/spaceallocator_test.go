@@ -358,6 +358,92 @@ func TestOutdatedItems(t *testing.T) {
 	}
 }
 
+func TestPartLimit(t *testing.T) {
+	type testFile struct {
+		name string
+		size uint64
+	}
+
+	// Total exists files 224 Kb, total size ~992 Kb, size limit 50% 496 Kb
+	existFiles := []testFile{
+		{name: "file1.data", size: 96 * kilobyte},
+		{name: "file2.data", size: 32 * kilobyte},
+		{name: "file3.data", size: 64 * kilobyte},
+	}
+
+	mountPoint := filepath.Join(tmpDir, "test")
+
+	disk, err := newTestDisk(mountPoint, 1, func(mountPoint string) error {
+		for _, existFile := range existFiles {
+			file, err := os.Create(filepath.Join(mountPoint, existFile.name))
+			if err != nil {
+				return aoserrors.Wrap(err)
+			}
+
+			buffer := bytes.NewBuffer(make([]byte, existFile.size))
+
+			if _, err := io.Copy(file, buffer); err != nil {
+				return aoserrors.Wrap(err)
+			}
+
+			file.Close()
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Can't create test disk: %v", err)
+	}
+
+	defer disk.close()
+
+	removedFiles := make([]string, 0)
+
+	allocator, err := spaceallocator.New(mountPoint, 50, func(id string) error {
+		removedFiles = append(removedFiles, id)
+
+		if err := os.RemoveAll(filepath.Join(mountPoint, id)); err != nil {
+			return aoserrors.Wrap(err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("Can't create allocator: %v", err)
+	}
+	defer allocator.Close()
+
+	// 496 Kb - 224 Kb = 272 Kb available
+
+	space1, err := allocator.AllocateSpace(256 * kilobyte)
+	if err != nil {
+		t.Fatalf("Can't allocate space: %v", err)
+	}
+
+	// More should fail due to partition limit
+
+	if _, err := allocator.AllocateSpace(128 * kilobyte); !errors.Is(err, spaceallocator.ErrNoSpace) {
+		t.Errorf("Wrong allocator error: %v", err)
+	}
+
+	// Test free space
+
+	allocator.FreeSpace(128 * kilobyte)
+
+	space2, err := allocator.AllocateSpace(128 * kilobyte)
+	if err != nil {
+		t.Errorf("Can't allocate space: %v", err)
+	}
+
+	if err := space2.Release(); err != nil {
+		t.Errorf("Can't release space: %v", err)
+	}
+
+	if err := space1.Accept(); err != nil {
+		t.Errorf("Can't accept space: %v", err)
+	}
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
