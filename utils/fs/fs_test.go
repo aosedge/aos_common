@@ -20,8 +20,11 @@ package fs_test
 import (
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
@@ -152,6 +155,12 @@ func TestGetDirSize(t *testing.T) {
 		t.Fatalf("Can't mount partition: %s", err)
 	}
 
+	defer func() {
+		if err := fs.Umount(mountPoint); err != nil {
+			t.Fatalf("Can't umount partition: %s", err)
+		}
+	}()
+
 	firstDir := filepath.Join(mountPoint, "dirSize")
 
 	if _, err := fs.GetDirSize(firstDir); err == nil {
@@ -168,11 +177,16 @@ func TestGetDirSize(t *testing.T) {
 
 	size, err := fs.GetDirSize(firstDir)
 	if err != nil {
-		t.Errorf("Can't get directory size: %v", err)
+		t.Fatalf("Can't get directory size: %v", err)
 	}
 
-	if size == 0 {
-		t.Error("Expected non zero directory size")
+	expectedSize, err := getDirSize(firstDir)
+	if err != nil {
+		t.Fatalf("Can't get directory size: %v", err)
+	}
+
+	if size != expectedSize {
+		t.Errorf("Wrong directory size: %d", size)
 	}
 }
 
@@ -376,4 +390,24 @@ contentLoop:
 	}
 
 	return nil
+}
+
+func getDirSize(path string) (int64, error) {
+	out, err := exec.Command("du", "-s", "-B1", path).Output()
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	fields := strings.Fields(string(out))
+
+	if len(fields) < 2 {
+		return 0, aoserrors.New("wrong output format")
+	}
+
+	size, err := strconv.ParseInt(fields[0], 10, 64)
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return size, nil
 }
