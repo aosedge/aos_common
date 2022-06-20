@@ -136,8 +136,13 @@ func TestAvailableSize(t *testing.T) {
 			t.Errorf("Can't get available size: %v", err)
 		}
 
-		if availableSize <= 0 {
-			t.Errorf("Expected available memory more than 0")
+		expectedSize, err := getAvailableSize(firstDir)
+		if err != nil {
+			t.Fatalf("Can't get available size: %v", err)
+		}
+
+		if availableSize != expectedSize {
+			t.Errorf("Wrong available size: %d", availableSize)
 		}
 
 		if err := fs.Umount(mountPoint); err != nil {
@@ -405,6 +410,32 @@ func getDirSize(path string) (int64, error) {
 	}
 
 	size, err := strconv.ParseInt(fields[0], 10, 64)
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return size, nil
+}
+
+func getAvailableSize(path string) (int64, error) {
+	out, err := exec.Command("df", "-h", "-B1", path).Output()
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	lines := strings.Split(string(out), "\n")
+
+	if len(lines) < 2 {
+		return 0, aoserrors.New("wrong output format")
+	}
+
+	fields := strings.Fields(lines[1])
+
+	if len(fields) < 4 {
+		return 0, aoserrors.New("wrong output format")
+	}
+
+	size, err := strconv.ParseInt(fields[3], 10, 64)
 	if err != nil {
 		return 0, aoserrors.Wrap(err)
 	}
