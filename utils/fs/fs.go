@@ -46,6 +46,8 @@ const (
 
 const folderPerm = 0o755
 
+const statBlockSize = 512
+
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
@@ -184,11 +186,15 @@ func GetDirSize(path string) (size int64, err error) {
 			return aoserrors.Wrap(err)
 		}
 
-		if !info.IsDir() {
-			size += info.Size()
+		var stat syscall.Stat_t
+
+		if err = syscall.Lstat(path, &stat); err != nil {
+			return aoserrors.Wrap(err)
 		}
 
-		return aoserrors.Wrap(err)
+		size += stat.Blocks * statBlockSize
+
+		return nil
 	}); err != nil {
 		return 0, aoserrors.Wrap(err)
 	}
