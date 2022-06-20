@@ -151,6 +151,32 @@ func TestAvailableSize(t *testing.T) {
 	}
 }
 
+func TestTotalSize(t *testing.T) {
+	for _, part := range disk.Partitions {
+		if err := fs.Mount(part.Device, mountPoint, part.Type, 0, ""); err != nil {
+			t.Fatalf("Can't mount partition: %v", err)
+		}
+
+		totalSize, err := fs.GetTotalSize(mountPoint)
+		if err != nil {
+			t.Errorf("Can't get total size: %v", err)
+		}
+
+		expectedSize, err := getTotalSize(mountPoint)
+		if err != nil {
+			t.Fatalf("Can't get total size: %v", err)
+		}
+
+		if totalSize != expectedSize {
+			t.Errorf("Wrong total size: %d", totalSize)
+		}
+
+		if err := fs.Umount(mountPoint); err != nil {
+			t.Fatalf("Can't umount partition: %v", err)
+		}
+	}
+}
+
 func TestGetDirSize(t *testing.T) {
 	partition := disk.Partitions[0]
 
@@ -436,6 +462,32 @@ func getAvailableSize(path string) (int64, error) {
 	}
 
 	size, err := strconv.ParseInt(fields[3], 10, 64)
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return size, nil
+}
+
+func getTotalSize(path string) (int64, error) {
+	out, err := exec.Command("df", "-h", "-B1", path).Output()
+	if err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	lines := strings.Split(string(out), "\n")
+
+	if len(lines) < 2 {
+		return 0, aoserrors.New("wrong output format")
+	}
+
+	fields := strings.Fields(lines[1])
+
+	if len(fields) < 4 {
+		return 0, aoserrors.New("wrong output format")
+	}
+
+	size, err := strconv.ParseInt(fields[1], 10, 64)
 	if err != nil {
 		return 0, aoserrors.Wrap(err)
 	}

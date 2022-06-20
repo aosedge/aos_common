@@ -179,6 +179,17 @@ func GetAvailableSize(dir string) (availableSize int64, err error) {
 	return int64(stat.Bavail) * stat.Bsize, nil
 }
 
+// GetTotalSize returns total partition size.
+func GetTotalSize(dir string) (totalSize int64, err error) {
+	var stat syscall.Statfs_t
+
+	if err = syscall.Statfs(dir, &stat); err != nil {
+		return 0, aoserrors.Wrap(err)
+	}
+
+	return int64(stat.Blocks) * stat.Bsize, nil
+}
+
 // GetDirSize returns the size of directory.
 func GetDirSize(path string) (size int64, err error) {
 	if err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
