@@ -18,7 +18,9 @@
 package wsclient_test
 
 import (
+	"crypto/rsa"
 	"encoding/json"
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -28,6 +30,8 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/utils/cryptutils"
+	"github.com/aoscloud/aos_common/utils/testtools"
 	"github.com/aoscloud/aos_common/wsclient"
 	"github.com/aoscloud/aos_common/wsserver"
 )
@@ -39,9 +43,6 @@ import (
 const (
 	hostURL   = ":8088"
 	serverURL = "wss://localhost:8088"
-	crtFile   = "../wsserver/data/crt.pem"
-	keyFile   = "../wsserver/data/key.pem"
-	caCert    = "../wsserver/data/rootCA.pem"
 )
 
 /***********************************************************************************************************************
@@ -57,6 +58,13 @@ type testHandler struct {
 /***********************************************************************************************************************
  * Vars
  **********************************************************************************************************************/
+
+var (
+	tmpDir  string
+	crtFile string
+	keyFile string
+	caCert  string
+)
 
 /***********************************************************************************************************************
  * Init
@@ -77,7 +85,20 @@ func init() {
  **********************************************************************************************************************/
 
 func TestMain(m *testing.M) {
+	tmpDir, err := ioutil.TempDir("", "aos_")
+	if err != nil {
+		log.Fatalf("Error create temporary dir: %s", err)
+	}
+
+	if err := prepareTestCert(); err != nil {
+		log.Fatalf("Can't prepare certificate and key: %v", err)
+	}
+
 	ret := m.Run()
+
+	if err := os.RemoveAll(tmpDir); err != nil {
+		log.Fatalf("Error removing tmp dir: %s", err)
+	}
 
 	os.Exit(ret)
 }
@@ -591,4 +612,93 @@ func (handler *testHandler) ProcessMessage(
 }
 
 func (handler *testHandler) ClientDisconnected(client *wsserver.Client) {
+}
+
+func savePEMFile(data []byte) (string, error) {
+	file, err := ioutil.TempFile(tmpDir, "*."+cryptutils.PEMExt)
+	if err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	if _, err = file.Write(data); err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+
+	return file.Name(), nil
+}
+
+func prepareTestCert() error {
+	certCA, key, err := testtools.GenerateDefaultCARootCertAndKey()
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	keyRSA, ok := key.(*rsa.PrivateKey)
+	if !ok {
+		return aoserrors.New("can't convert crypto to RSA private key")
+	}
+
+	subject := testtools.DefaultCertificateTemplate.Subject
+	subject.CommonName = "Aos Secondary CA"
+
+	certSecond, keySecond, err := testtools.GenerateCACertAndKey(certCA, keyRSA, subject)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	keySecondRSA, ok := keySecond.(*rsa.PrivateKey)
+	if !ok {
+		return aoserrors.New("can't convert crypto to RSA private key")
+	}
+
+	subject = testtools.DefaultCertificateTemplate.Subject
+	subject.OrganizationalUnit = []string{"Novus Ordo Seclorum"}
+	subject.CommonName = "Aos vehicles Intermediate CA"
+
+	certInter, keyInter, err := testtools.GenerateCACertAndKey(certSecond, keySecondRSA, subject)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	keyInterRSA, ok := keyInter.(*rsa.PrivateKey)
+	if !ok {
+		return aoserrors.New("can't convert crypto to RSA private key")
+	}
+
+	subject = testtools.DefaultCertificateTemplate.Subject
+	subject.CommonName = "Aos update manager"
+
+	cert, keyUpdateManager, err := testtools.GenerateCertAndKeyWithSubject(subject, certInter, keyInterRSA)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	var certChain []byte
+
+	certChain = append(certChain, cryptutils.CertToPEM(cert)...)
+	certChain = append(certChain, cryptutils.CertToPEM(certInter)...)
+	certChain = append(certChain, cryptutils.CertToPEM(certSecond)...)
+
+	caCert, err = savePEMFile(cryptutils.CertToPEM(certCA))
+	if err != nil {
+		return nil
+	}
+
+	crtFile, err = savePEMFile(certChain)
+	if err != nil {
+		return nil
+	}
+
+	pemKey, err := cryptutils.PrivateKeyToPEM(keyUpdateManager)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	keyFile, err = savePEMFile(pemKey)
+	if err != nil {
+		return nil
+	}
+
+	return nil
 }
