@@ -260,6 +260,13 @@ func (cryptoContext *CryptoContext) GetClientTLSConfig() (*tls.Config, error) {
 	return &tls.Config{RootCAs: cryptoContext.rootCertPool, MinVersion: tls.VersionTLS12}, nil
 }
 
+// CertToPEM is a utility function returns a PEM encoded x509 Certificate.
+func CertToPEM(cert *x509.Certificate) []byte {
+	pemCert := pem.EncodeToMemory(&pem.Block{Type: PEMBlockCertificate, Bytes: cert.Raw})
+
+	return pemCert
+}
+
 // PEMToX509Cert parses PEM data to x509 certificate structures.
 func PEMToX509Cert(data []byte) (certs []*x509.Certificate, err error) {
 	var block *pem.Block
