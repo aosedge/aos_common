@@ -280,7 +280,16 @@ func (allocator *Allocator) allocateSpace(size uint64) error {
 	}
 
 	if allocator.sizeLimit > 0 && allocator.allocatedSize+size > allocator.sizeLimit {
-		return ErrNoSpace
+		freedSize, err := allocator.removeOutdatedItems(allocator.allocatedSize + size - allocator.sizeLimit)
+		if err != nil {
+			return err
+		}
+
+		if freedSize > allocator.allocatedSize {
+			allocator.allocatedSize = 0
+		} else {
+			allocator.allocatedSize -= freedSize
+		}
 	}
 
 	allocator.allocatedSize += size
@@ -331,14 +340,57 @@ func (allocator *Allocator) allocateDone() error {
 	return nil
 }
 
-func (allocator *Allocator) removeOutdatedItem(item outdatedItem) error {
-	if err := allocator.remover(item.id); err != nil {
-		return err
+func (allocator *Allocator) removeOutdatedItems(requiredSize uint64) (freedSize uint64, err error) {
+	var totalSize uint64
+
+	for _, item := range allocator.part.outdatedItems {
+		if item.allocator != allocator {
+			continue
+		}
+
+		totalSize += item.size
 	}
 
-	allocator.freeSpace(item.size)
+	if requiredSize > totalSize {
+		return 0, ErrNoSpace
+	}
 
-	return nil
+	log.WithFields(log.Fields{
+		"mountPoint": allocator.part.mountPoint, "requiredSize": requiredSize,
+	}).Debug("Remove outdated items")
+
+	sort.Sort(byTimestamp(allocator.part.outdatedItems))
+
+	i := 0
+
+	for _, item := range allocator.part.outdatedItems {
+		if item.allocator != allocator {
+			allocator.part.outdatedItems[i] = item
+			i++
+
+			continue
+		}
+
+		log.WithFields(log.Fields{
+			"mountPoint": allocator.part.mountPoint, "id": item.id, "size": item.size,
+		}).Debug("Remove outdated item")
+
+		if err := item.allocator.remover(item.id); err != nil {
+			return freedSize, err
+		}
+
+		item.allocator.part.freeSpace(item.size)
+
+		freedSize += item.size
+
+		if freedSize >= requiredSize {
+			break
+		}
+	}
+
+	allocator.part.outdatedItems = allocator.part.outdatedItems[:i]
+
+	return freedSize, nil
 }
 
 func newPart(mountPoint string) (*partition, error) {
@@ -474,9 +526,11 @@ func (part *partition) removeOutdatedItems(requiredSize uint64) (freedSize uint6
 			"mountPoint": part.mountPoint, "id": item.id, "size": item.size,
 		}).Debug("Remove outdated item")
 
-		if err = item.allocator.removeOutdatedItem(item); err != nil {
+		if err := item.allocator.remover(item.id); err != nil {
 			return freedSize, err
 		}
+
+		item.allocator.freeSpace(item.size)
 
 		freedSize += item.size
 	}
