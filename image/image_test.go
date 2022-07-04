@@ -24,12 +24,14 @@ import (
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
 
 	log "github.com/sirupsen/logrus"
 
+	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/image"
 )
 
@@ -37,7 +39,10 @@ import (
  * Consts
  **********************************************************************************************************************/
 
-const filePerm = 0o600
+const (
+	filePerm       = 0o600
+	dirSymlinkSize = int64(4 * 1024)
+)
 
 /***********************************************************************************************************************
  * Vars
@@ -248,4 +253,70 @@ func TestCheckFileInfo(t *testing.T) {
 	if err = image.CheckFileInfo(context.Background(), fileNamePath, info); err == nil {
 		t.Error("sha512 should not be matched")
 	}
+}
+
+func TestUncompressedContentSize(t *testing.T) {
+	contentSize := int64(2 * 1024)
+
+	dir, err := createTestDir("testDir1", contentSize)
+	if err != nil {
+		t.Fatalf("Can't create test dir: %v", err)
+	}
+
+	defer os.Remove(dir)
+
+	tarFile1 := filepath.Join(workDir, "archive1.tar")
+
+	if output, err := exec.Command("tar", "-C", dir, "-cf", tarFile1, "./").CombinedOutput(); err != nil {
+		t.Fatalf("Can't create tar archive: message: %s, err: %v", string(output), err)
+	}
+	defer os.Remove(tarFile1)
+
+	size, err := image.GetUncompressedTarContentSize(tarFile1)
+	if err != nil {
+		t.Fatalf("Can't get tar content size: %v", err)
+	}
+
+	if contentSize+dirSymlinkSize+dirSymlinkSize != size {
+		t.Errorf("Unexpected tar content size: %v", size)
+	}
+
+	tarFile2 := filepath.Join(workDir, "archive2.tar.gz")
+
+	if output, err := exec.Command("tar", "-C", dir, "-czf", tarFile2, "./").CombinedOutput(); err != nil {
+		t.Fatalf("Can't create tar archive: message: %s, err: %v", string(output), err)
+	}
+	defer os.Remove(tarFile2)
+
+	if size, err = image.GetUncompressedTarContentSize(tarFile2); err != nil {
+		t.Fatalf("Can't get tar content size: %v", err)
+	}
+
+	if contentSize+dirSymlinkSize+dirSymlinkSize != size {
+		t.Errorf("Unexpected tar content size: %v", size)
+	}
+}
+
+func createTestDir(dirName string, sizeContent int64) (string, error) {
+	tmpFolder := filepath.Join(workDir, dirName)
+
+	if err := os.MkdirAll(tmpFolder, 0o755); err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+
+	file, err := os.Create(filepath.Join(tmpFolder, "testFile.txt"))
+	if err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	if err := file.Truncate(sizeContent); err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+
+	if err := os.Symlink(file.Name(), filepath.Join(tmpFolder, "symlink")); err != nil {
+		return "", aoserrors.Wrap(err)
+	}
+
+	return tmpFolder, nil
 }
