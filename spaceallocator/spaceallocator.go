@@ -33,8 +33,25 @@ import (
  * Types
  **********************************************************************************************************************/
 
-// Allocator space allocator.
-type Allocator struct {
+// Allocator space allocator interface.
+type Allocator interface {
+	AllocateSpace(size uint64) (Space, error)
+	FreeSpace(size uint64)
+	AddOutdatedItem(id string, size uint64, timestamp time.Time) error
+	RestoreOutdatedItem(id string)
+	Close() error
+}
+
+// Space allocated space interface.
+type Space interface {
+	Accept() error
+	Release() error
+}
+
+// ItemRemover requests to remove item in order to free space.
+type ItemRemover func(id string) error
+
+type allocatorInstance struct {
 	sync.Mutex
 
 	path            string
@@ -46,15 +63,11 @@ type Allocator struct {
 	allocatedSize   uint64
 }
 
-// Space allocated space.
-type Space struct {
+type spaceInstance struct {
 	size      uint64
 	path      string
-	allocator *Allocator
+	allocator *allocatorInstance
 }
-
-// ItemRemover requests to remove item in order to free space.
-type ItemRemover func(id string) error
 
 type partition struct {
 	sync.Mutex
@@ -72,7 +85,7 @@ type outdatedItem struct {
 	id        string
 	size      uint64
 	timestamp time.Time
-	allocator *Allocator
+	allocator *allocatorInstance
 }
 
 type byTimestamp []outdatedItem
@@ -97,7 +110,7 @@ var (
  **********************************************************************************************************************/
 
 // New creates new space allocator.
-func New(path string, partLimit uint, remover ItemRemover) (*Allocator, error) {
+func New(path string, partLimit uint, remover ItemRemover) (Allocator, error) {
 	partsMutex.Lock()
 	defer partsMutex.Unlock()
 
@@ -127,7 +140,7 @@ func New(path string, partLimit uint, remover ItemRemover) (*Allocator, error) {
 
 	part.allocatorCount++
 
-	allocator := &Allocator{
+	allocator := &allocatorInstance{
 		path:      path,
 		partLimit: partLimit,
 		part:      part,
@@ -142,7 +155,7 @@ func New(path string, partLimit uint, remover ItemRemover) (*Allocator, error) {
 }
 
 // Close closes space allocator.
-func (allocator *Allocator) Close() (err error) {
+func (allocator *allocatorInstance) Close() (err error) {
 	partsMutex.Lock()
 	defer partsMutex.Unlock()
 
@@ -164,7 +177,7 @@ func (allocator *Allocator) Close() (err error) {
 }
 
 // AllocateSpace allocates space in storage.
-func (allocator *Allocator) AllocateSpace(size uint64) (*Space, error) {
+func (allocator *allocatorInstance) AllocateSpace(size uint64) (Space, error) {
 	log.WithFields(log.Fields{"path": allocator.path, "size": size}).Debug("Allocate space")
 
 	if err := allocator.allocateSpace(size); err != nil {
@@ -175,11 +188,11 @@ func (allocator *Allocator) AllocateSpace(size uint64) (*Space, error) {
 		return nil, err
 	}
 
-	return &Space{size: size, path: allocator.path, allocator: allocator}, nil
+	return &spaceInstance{size: size, path: allocator.path, allocator: allocator}, nil
 }
 
 // Accept accepts previously allocated space.
-func (space *Space) Accept() error {
+func (space *spaceInstance) Accept() error {
 	log.WithFields(log.Fields{"path": space.path, "size": space.size}).Debug("Space accepted")
 
 	if err := space.allocator.allocateDone(); err != nil {
@@ -194,7 +207,7 @@ func (space *Space) Accept() error {
 }
 
 // Release releases previously allocated space.
-func (space *Space) Release() error {
+func (space *spaceInstance) Release() error {
 	log.WithFields(log.Fields{"path": space.path, "size": space.size}).Debug("Space released")
 
 	space.allocator.freeSpace(space.size)
@@ -213,7 +226,7 @@ func (space *Space) Release() error {
 
 // FreeSpace frees space in storage.
 // This function should be called when storage item is removed by owner.
-func (allocator *Allocator) FreeSpace(size uint64) {
+func (allocator *allocatorInstance) FreeSpace(size uint64) {
 	log.WithFields(log.Fields{"path": allocator.path, "size": size}).Debug("Free space")
 
 	allocator.freeSpace(size)
@@ -225,7 +238,7 @@ func (allocator *Allocator) FreeSpace(size uint64) {
 // outdated items. Item owner should remove this item. ItemRemover function is called based on item timestamp:
 // oldest item should be removed first. After calling ItemRemover the item is automatically removed from outdated
 // item list.
-func (allocator *Allocator) AddOutdatedItem(id string, size uint64, timestamp time.Time) error {
+func (allocator *allocatorInstance) AddOutdatedItem(id string, size uint64, timestamp time.Time) error {
 	log.WithFields(log.Fields{
 		"path": allocator.path, "id": id, "size": size, "timestamp": timestamp,
 	}).Debug("Add outdated item")
@@ -240,7 +253,7 @@ func (allocator *Allocator) AddOutdatedItem(id string, size uint64, timestamp ti
 }
 
 // RestoreOutdatedItem removes item from outdated item list.
-func (allocator *Allocator) RestoreOutdatedItem(id string) {
+func (allocator *allocatorInstance) RestoreOutdatedItem(id string) {
 	log.WithFields(log.Fields{"path": allocator.path, "id": id}).Debug("Restore outdated item")
 
 	allocator.part.restoreOutdatedItem(id)
@@ -258,7 +271,7 @@ func (items byTimestamp) Swap(i, j int)      { items[i], items[j] = items[j], it
  * Private
  **********************************************************************************************************************/
 
-func (allocator *Allocator) allocateSpace(size uint64) error {
+func (allocator *allocatorInstance) allocateSpace(size uint64) error {
 	if allocator.sizeLimit == 0 {
 		return nil
 	}
@@ -302,7 +315,7 @@ func (allocator *Allocator) allocateSpace(size uint64) error {
 	return nil
 }
 
-func (allocator *Allocator) freeSpace(size uint64) {
+func (allocator *allocatorInstance) freeSpace(size uint64) {
 	if allocator.sizeLimit == 0 {
 		return
 	}
@@ -323,7 +336,7 @@ func (allocator *Allocator) freeSpace(size uint64) {
 	}
 }
 
-func (allocator *Allocator) allocateDone() error {
+func (allocator *allocatorInstance) allocateDone() error {
 	if allocator.sizeLimit == 0 {
 		return nil
 	}
@@ -340,7 +353,7 @@ func (allocator *Allocator) allocateDone() error {
 	return nil
 }
 
-func (allocator *Allocator) removeOutdatedItems(requiredSize uint64) (freedSize uint64, err error) {
+func (allocator *allocatorInstance) removeOutdatedItems(requiredSize uint64) (freedSize uint64, err error) {
 	var totalSize uint64
 
 	for _, item := range allocator.part.outdatedItems {
