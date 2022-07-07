@@ -91,6 +91,10 @@ func Download(ctx context.Context, destination, url string) (fileName string, er
 
 		case <-resp.Done:
 			if err := resp.Err(); err != nil {
+				if removeErr := os.RemoveAll(resp.Filename); removeErr != nil {
+					log.Errorf("Can't remove download file: %v", removeErr)
+				}
+
 				return "", aoserrors.Wrap(err)
 			}
 
