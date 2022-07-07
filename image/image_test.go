@@ -18,8 +18,11 @@
 package image_test
 
 import (
+	"compress/gzip"
 	"context"
+	"crypto/rand"
 	"encoding/hex"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -33,6 +36,7 @@ import (
 
 	"github.com/aoscloud/aos_common/aoserrors"
 	"github.com/aoscloud/aos_common/image"
+	"github.com/aoscloud/aos_common/utils/testtools"
 )
 
 /***********************************************************************************************************************
@@ -297,6 +301,142 @@ func TestUncompressedContentSize(t *testing.T) {
 	}
 }
 
+func TestCopyImage(t *testing.T) {
+	fileSize := int64(1500000)
+	srcFile := filepath.Join(workDir, "src.dat")
+	dstFile := filepath.Join(workDir, "dst.dat")
+
+	if err := generateRandomFile(srcFile, fileSize); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	copied, err := image.Copy(dstFile, srcFile)
+	if err != nil {
+		t.Fatalf("Can't copy image: %v", err)
+	}
+
+	if copied != fileSize {
+		t.Fatalf("Wrong copied size: %d", copied)
+	}
+
+	if err = testtools.CompareFiles(dstFile, srcFile); err != nil {
+		t.Errorf("Compare error: %s", err)
+	}
+}
+
+func TestCopyImageFromGzipArchive(t *testing.T) {
+	fileSize := int64(1500000)
+	srcFile := filepath.Join(workDir, "src.dat")
+	dstFile := filepath.Join(workDir, "dst.dat")
+	archiveFile := filepath.Join(workDir, "dst.gz")
+
+	if err := generateRandomFile(srcFile, fileSize); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	if err := gzipFile(archiveFile, srcFile); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	copied, err := image.CopyFromGzipArchive(dstFile, archiveFile)
+	if err != nil {
+		t.Fatalf("Can't copy image: %v", err)
+	}
+
+	if copied != fileSize {
+		t.Fatalf("Wrong copied size: %d", copied)
+	}
+
+	if err = testtools.CompareFiles(dstFile, srcFile); err != nil {
+		t.Errorf("Compare error: %s", err)
+	}
+}
+
+func TestCopyImageToDevice(t *testing.T) {
+	fileSize := int64(1500000)
+	srcFile := filepath.Join(workDir, "src.dat")
+	dstFile := filepath.Join(workDir, "dst.dat")
+
+	if err := generateRandomFile(srcFile, fileSize); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	if err := os.RemoveAll(dstFile); err != nil {
+		t.Fatalf("Can't remove destination file: %v", err)
+	}
+
+	if _, err := image.CopyToDevice(dstFile, srcFile); err == nil {
+		t.Error("Error expected as device doesn't exist")
+	}
+
+	file, err := os.Create(dstFile)
+	if err != nil {
+		t.Fatalf("Can't create destination file: %v", err)
+	}
+
+	file.Close()
+
+	copied, err := image.CopyToDevice(dstFile, srcFile)
+	if err != nil {
+		t.Fatalf("Can't copy image: %v", err)
+	}
+
+	if copied != fileSize {
+		t.Fatalf("Wrong copied size: %d", copied)
+	}
+
+	if err = testtools.CompareFiles(dstFile, srcFile); err != nil {
+		t.Errorf("Compare error: %s", err)
+	}
+}
+
+func TestCopyImageFromGzipArchiveToDevice(t *testing.T) {
+	fileSize := int64(1500000)
+	srcFile := filepath.Join(workDir, "src.dat")
+	dstFile := filepath.Join(workDir, "dst.dat")
+	archiveFile := filepath.Join(workDir, "dst.gz")
+
+	if err := generateRandomFile(srcFile, fileSize); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	if err := gzipFile(archiveFile, srcFile); err != nil {
+		t.Fatalf("Can't generate random file: %v", err)
+	}
+
+	if err := os.RemoveAll(dstFile); err != nil {
+		t.Fatalf("Can't remove destination file: %v", err)
+	}
+
+	if _, err := image.CopyFromGzipArchiveToDevice(dstFile, srcFile); err == nil {
+		t.Error("Error expected as device doesn't exist")
+	}
+
+	file, err := os.Create(dstFile)
+	if err != nil {
+		t.Fatalf("Can't create destination file: %v", err)
+	}
+
+	file.Close()
+
+	copied, err := image.CopyFromGzipArchiveToDevice(dstFile, archiveFile)
+	if err != nil {
+		t.Fatalf("Can't copy image: %v", err)
+	}
+
+	if copied != fileSize {
+		t.Fatalf("Wrong copied size: %d", copied)
+	}
+
+	if err = testtools.CompareFiles(dstFile, srcFile); err != nil {
+		t.Errorf("Compare error: %s", err)
+	}
+}
+
+/*******************************************************************************
+ * Private
+ ******************************************************************************/
+
 func createTestDir(dirName string, sizeContent int64) (string, error) {
 	tmpFolder := filepath.Join(workDir, dirName)
 
@@ -319,4 +459,41 @@ func createTestDir(dirName string, sizeContent int64) (string, error) {
 	}
 
 	return tmpFolder, nil
+}
+
+func generateRandomFile(filePath string, size int64) error {
+	file, err := os.Create(filePath)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	if _, err := io.CopyN(file, rand.Reader, size); err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	return nil
+}
+
+func gzipFile(dst, src string) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+	defer srcFile.Close()
+
+	dstFile, err := os.Create(dst)
+	if err != nil {
+		return aoserrors.Wrap(err)
+	}
+	defer dstFile.Close()
+
+	gzipWriter := gzip.NewWriter(dstFile)
+	defer gzipWriter.Close()
+
+	if _, err := io.Copy(gzipWriter, srcFile); err != nil {
+		return aoserrors.Wrap(err)
+	}
+
+	return nil
 }
