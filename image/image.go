@@ -119,7 +119,7 @@ func CheckFileInfo(ctx context.Context, fileName string, fileInfo FileInfo) (err
 	}
 
 	if uint64(stat.Size()) != fileInfo.Size {
-		return aoserrors.New("file size mistmatch")
+		return aoserrors.New("file size mismatch")
 	}
 
 	hash256 := sha3.New256()
@@ -131,7 +131,7 @@ func CheckFileInfo(ctx context.Context, fileName string, fileInfo FileInfo) (err
 	}
 
 	if !reflect.DeepEqual(hash256.Sum(nil), fileInfo.Sha256) {
-		return aoserrors.New("checksum sha256 mistmatch")
+		return aoserrors.New("checksum sha256 mismatch")
 	}
 
 	hash512 := sha3.New512()
@@ -145,7 +145,7 @@ func CheckFileInfo(ctx context.Context, fileName string, fileInfo FileInfo) (err
 	}
 
 	if !reflect.DeepEqual(hash512.Sum(nil), fileInfo.Sha512) {
-		return aoserrors.New("checksum sha512 mistmatch")
+		return aoserrors.New("checksum sha512 mismatch")
 	}
 
 	return nil
