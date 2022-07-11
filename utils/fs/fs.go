@@ -108,6 +108,14 @@ func OverlayMount(mountPoint string, lowerDirs []string, workDir, upperDir strin
 func Umount(mountPoint string) (err error) {
 	log.WithFields(log.Fields{"mountPoint": mountPoint}).Debug("Umount dir")
 
+	if _, err = os.Stat(mountPoint); err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+
+		return aoserrors.Wrap(err)
+	}
+
 	defer func() {
 		if removeErr := os.RemoveAll(mountPoint); removeErr != nil {
 			log.Errorf("Can't remove mount point: %s", removeErr)

@@ -103,6 +103,12 @@ func TestMountUmountContinued(t *testing.T) {
 	}
 }
 
+func TestMountUmountNotexistDir(t *testing.T) {
+	if err := fs.Umount("somedir"); err != nil {
+		t.Fatalf("Can't umount not exist dir: %v", err)
+	}
+}
+
 func TestMountAlreadyMounted(t *testing.T) {
 	for _, part := range disk.Partitions {
 		if err := fs.Mount(part.Device, mountPoint, part.Type, 0, ""); err != nil {
