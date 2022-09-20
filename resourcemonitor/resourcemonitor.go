@@ -72,6 +72,7 @@ type MonitoringSender interface {
 type TrafficMonitoring interface {
 	GetSystemTraffic() (inputTraffic, outputTraffic uint64, err error)
 	GetInstanceTraffic(instanceID string) (inputTraffic, outputTraffic uint64, err error)
+	UpdateIptablesFilterCache() error
 }
 
 // Config configuration for resource monitoring.
@@ -372,6 +373,12 @@ func (monitor *ResourceMonitor) run(ctx context.Context) {
 
 		case <-monitor.pollTimer.C:
 			monitor.Lock()
+			if monitor.trafficMonitoring != nil {
+				if err := monitor.trafficMonitoring.UpdateIptablesFilterCache(); err != nil {
+					log.Errorf("Failed to update iptables cache: %v", err)
+				}
+			}
+
 			monitor.getCurrentSystemData()
 			monitor.getCurrentInstanceData()
 			monitor.processAlerts()

@@ -630,6 +630,10 @@ func (trafficMonitoring *testTrafficMonitoring) GetSystemTraffic() (inputTraffic
 	return trafficMonitoring.inputTraffic, trafficMonitoring.outputTraffic, nil
 }
 
+func (trafficMonitoring *testTrafficMonitoring) UpdateIptablesFilterCache() error {
+	return nil
+}
+
 func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID string) (
 	inputTraffic, outputTraffic uint64, err error,
 ) {
