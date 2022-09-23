@@ -26,6 +26,17 @@ import (
 )
 
 /***********************************************************************************************************************
+ * Consts
+ **********************************************************************************************************************/
+
+const (
+	dayDuration   = 24 * time.Hour
+	weekDuration  = 7 * dayDuration
+	yearDuration  = 365*dayDuration + 6*time.Hour
+	monthDuration = yearDuration / 12
+)
+
+/***********************************************************************************************************************
  * Tests
  **********************************************************************************************************************/
 
@@ -98,6 +109,20 @@ func TestDurationMarshal(t *testing.T) {
 	unmarshalData := []testData{
 		{rawJSON: `{"duration":"10s"}`, duration: aostypes.Duration{10 * time.Second}},
 		{rawJSON: `{"duration":"1m30s"}`, duration: aostypes.Duration{90 * time.Second}},
+		{rawJSON: `{"duration":"PT10S"}`, duration: aostypes.Duration{10 * time.Second}},
+		{rawJSON: `{"duration":"PT1M30S"}`, duration: aostypes.Duration{90 * time.Second}},
+		{rawJSON: `{"duration":"P10Y"}`, duration: aostypes.Duration{10 * yearDuration}},
+		{rawJSON: `{"duration":"P10M"}`, duration: aostypes.Duration{10 * monthDuration}},
+		{rawJSON: `{"duration":"P2W"}`, duration: aostypes.Duration{2 * weekDuration}},
+		{rawJSON: `{"duration":"P2D"}`, duration: aostypes.Duration{2 * dayDuration}},
+		{rawJSON: `{"duration":"P1Y1M1W1DT1H1M1S"}`, duration: aostypes.Duration{
+			yearDuration + monthDuration + weekDuration + dayDuration + time.Hour + time.Minute + time.Second,
+		}},
+		{rawJSON: `{"duration":"PT00:00:10"}`, duration: aostypes.Duration{10 * time.Second}},
+		{rawJSON: `{"duration":"PT00:01:30"}`, duration: aostypes.Duration{90 * time.Second}},
+		{rawJSON: `{"duration":"P0001-01-01T01:01:01"}`, duration: aostypes.Duration{
+			yearDuration + monthDuration + dayDuration + time.Hour + time.Minute + time.Second,
+		}},
 	}
 
 	for _, item := range unmarshalData {
@@ -113,6 +138,23 @@ func TestDurationMarshal(t *testing.T) {
 
 		if testDuration.Duration != item.duration {
 			t.Errorf("Wrong time value: %v", testDuration)
+		}
+	}
+
+	// test invalid formats
+	invalidUnmarshalData := []string{
+		`{"duration":"T1H1M1S"}`,
+		`{"duration":"P0001-01T01:01:01"}`,
+		`{"duration":"P0001-01-01T01:01"}`,
+	}
+
+	for _, item := range invalidUnmarshalData {
+		var testDuration struct {
+			Duration aostypes.Duration `json:"duration"`
+		}
+
+		if err := json.Unmarshal([]byte(item), &testDuration); err == nil {
+			t.Errorf("Should be error unmarshal for duration: %s", item)
 		}
 	}
 
