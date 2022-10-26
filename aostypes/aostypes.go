@@ -105,12 +105,20 @@ type ResourceInfo struct {
 	Hosts  []Host            `json:"hosts,omitempty"`
 }
 
+// NodeConfig node configuration.
+type NodeConfig struct {
+	NodeID    string         `json:"nodeId"`
+	Devices   []DeviceInfo   `json:"devices,omitempty"`
+	Resources []ResourceInfo `json:"resources,omitempty"`
+	Labels    []string       `json:"labels,omitempty"`
+	Priority  uint32         `json:"priority,omitempty"`
+}
+
 // BoardConfig board configuration.
 type BoardConfig struct {
-	FormatVersion uint64         `json:"formatVersion"`
-	VendorVersion string         `json:"vendorVersion"`
-	Devices       []DeviceInfo   `json:"devices"`
-	Resources     []ResourceInfo `json:"resources"`
+	FormatVersion uint64       `json:"formatVersion"`
+	VendorVersion string       `json:"vendorVersion"`
+	Nodes         []NodeConfig `json:"nodes"`
 }
 
 /***********************************************************************************************************************
