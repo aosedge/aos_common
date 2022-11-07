@@ -461,16 +461,9 @@ type ComponentStatus struct {
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
-// VersionInfo common version structure.
-type VersionInfo struct {
-	AosVersion    uint64 `json:"aosVersion"`
-	VendorVersion string `json:"vendorVersion"`
-	Description   string `json:"description"`
-}
-
 // ServiceInfo decrypted service info.
 type ServiceInfo struct {
-	VersionInfo
+	aostypes.VersionInfo
 	ID         string `json:"id"`
 	ProviderID string `json:"providerId"`
 	DecryptDataStruct
@@ -478,7 +471,7 @@ type ServiceInfo struct {
 
 // LayerInfo decrypted layer info.
 type LayerInfo struct {
-	VersionInfo
+	aostypes.VersionInfo
 	ID     string `json:"id"`
 	Digest string `json:"digest"`
 	DecryptDataStruct
@@ -486,7 +479,7 @@ type LayerInfo struct {
 
 // ComponentInfo decrypted component info.
 type ComponentInfo struct {
-	VersionInfo
+	aostypes.VersionInfo
 	ID          string          `json:"id"`
 	Annotations json.RawMessage `json:"annotations,omitempty"`
 	DecryptDataStruct
