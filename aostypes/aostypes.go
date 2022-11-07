@@ -128,6 +128,16 @@ type InstanceIdent struct {
 	Instance  uint64 `json:"instance"`
 }
 
+// InstanceInfo instance information to start it.
+type InstanceInfo struct {
+	InstanceIdent
+	UID         uint32 `json:"uid"`
+	GID         uint32 `json:"gid"`
+	Priority    uint64 `json:"priority"`
+	StoragePath string `json:"storagePath"`
+	StatePath   string `json:"statePath"`
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/
