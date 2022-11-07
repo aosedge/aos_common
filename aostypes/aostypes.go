@@ -121,6 +121,13 @@ type UnitConfig struct {
 	Nodes         []NodeConfig `json:"nodes"`
 }
 
+// VersionInfo common version structure.
+type VersionInfo struct {
+	AosVersion    uint64 `json:"aosVersion"`
+	VendorVersion string `json:"vendorVersion"`
+	Description   string `json:"description"`
+}
+
 // InstanceIdent instance identification information.
 type InstanceIdent struct {
 	ServiceID string `json:"serviceId"`
