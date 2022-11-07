@@ -371,7 +371,7 @@ func TestInstances(t *testing.T) {
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
-				InstanceIdent: cloudprotocol.InstanceIdent{
+				InstanceIdent: aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject1",
 					Instance:  1,
@@ -389,7 +389,7 @@ func TestInstances(t *testing.T) {
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
-				InstanceIdent: cloudprotocol.InstanceIdent{
+				InstanceIdent: aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
@@ -399,12 +399,12 @@ func TestInstances(t *testing.T) {
 				AlertRules: alertRules,
 			},
 			alerts: []cloudprotocol.AlertItem{
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
 				}, "ram", time.Now(), 2100),
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
@@ -419,7 +419,7 @@ func TestInstances(t *testing.T) {
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
-				InstanceIdent: cloudprotocol.InstanceIdent{
+				InstanceIdent: aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
@@ -429,17 +429,17 @@ func TestInstances(t *testing.T) {
 				AlertRules: alertRules,
 			},
 			alerts: []cloudprotocol.AlertItem{
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
 				}, "ram", time.Now(), 2200),
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
 				}, "cpu", time.Now(), uint64(math.Round((45+45)/float64(numCPU)))),
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
@@ -454,7 +454,7 @@ func TestInstances(t *testing.T) {
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
-				InstanceIdent: cloudprotocol.InstanceIdent{
+				InstanceIdent: aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
@@ -464,17 +464,17 @@ func TestInstances(t *testing.T) {
 				AlertRules: alertRules,
 			},
 			alerts: []cloudprotocol.AlertItem{
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
 				}, "ram", time.Now(), 2200),
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
 				}, "cpu", time.Now(), uint64(math.Round((45+45)/float64(numCPU)))),
-				prepareInstanceAlertItem(cloudprotocol.InstanceIdent{
+				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
@@ -487,7 +487,7 @@ func TestInstances(t *testing.T) {
 
 	monitoringInstances := []cloudprotocol.InstanceMonitoringData{
 		{
-			InstanceIdent: cloudprotocol.InstanceIdent{
+			InstanceIdent: aostypes.InstanceIdent{
 				ServiceID: "service1",
 				SubjectID: "subject1",
 				Instance:  1,
@@ -499,7 +499,7 @@ func TestInstances(t *testing.T) {
 			OutTraffic: 150,
 		},
 		{
-			InstanceIdent: cloudprotocol.InstanceIdent{
+			InstanceIdent: aostypes.InstanceIdent{
 				ServiceID: "service2",
 				SubjectID: "subject1",
 				Instance:  1,
@@ -511,7 +511,7 @@ func TestInstances(t *testing.T) {
 			OutTraffic: 150,
 		},
 		{
-			InstanceIdent: cloudprotocol.InstanceIdent{
+			InstanceIdent: aostypes.InstanceIdent{
 				ServiceID: "service1",
 				SubjectID: "subject2",
 				Instance:  2,
@@ -523,7 +523,7 @@ func TestInstances(t *testing.T) {
 			OutTraffic: 250,
 		},
 		{
-			InstanceIdent: cloudprotocol.InstanceIdent{
+			InstanceIdent: aostypes.InstanceIdent{
 				ServiceID: "service1",
 				SubjectID: "subject2",
 				Instance:  2,

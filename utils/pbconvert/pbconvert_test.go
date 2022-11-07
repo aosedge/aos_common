@@ -21,6 +21,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
 	pb "github.com/aoscloud/aos_common/api/servicemanager/v2"
 	"github.com/aoscloud/aos_common/utils/pbconvert"
@@ -84,7 +85,7 @@ func TestInstanceIdentToPB(t *testing.T) {
 	expectdInstance := &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2}
 
 	pbInstance := pbconvert.InstanceIdentToPB(
-		cloudprotocol.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2})
+		aostypes.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2})
 
 	if !proto.Equal(pbInstance, expectdInstance) {
 		t.Error("Incorrect instance")
@@ -92,7 +93,7 @@ func TestInstanceIdentToPB(t *testing.T) {
 }
 
 func TestInstanceIdentFromPB(t *testing.T) {
-	expectedInstance := cloudprotocol.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2}
+	expectedInstance := aostypes.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2}
 
 	receivedInstance := pbconvert.NewInstanceIdentFromPB(
 		&pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2})
