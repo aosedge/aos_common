@@ -18,6 +18,7 @@
 package pbconvert
 
 import (
+	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
 	pb "github.com/aoscloud/aos_common/api/servicemanager/v2"
 )
@@ -40,12 +41,12 @@ func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pb.InstanceIdent {
 	return ident
 }
 
-func InstanceIdentToPB(ident cloudprotocol.InstanceIdent) *pb.InstanceIdent {
+func InstanceIdentToPB(ident aostypes.InstanceIdent) *pb.InstanceIdent {
 	return &pb.InstanceIdent{ServiceId: ident.ServiceID, SubjectId: ident.SubjectID, Instance: int64(ident.Instance)}
 }
 
-func NewInstanceIdentFromPB(ident *pb.InstanceIdent) cloudprotocol.InstanceIdent {
-	return cloudprotocol.InstanceIdent{
+func NewInstanceIdentFromPB(ident *pb.InstanceIdent) aostypes.InstanceIdent {
+	return aostypes.InstanceIdent{
 		ServiceID: ident.ServiceId,
 		SubjectID: ident.SubjectId,
 		Instance:  uint64(ident.Instance),

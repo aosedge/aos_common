@@ -121,6 +121,13 @@ type UnitConfig struct {
 	Nodes         []NodeConfig `json:"nodes"`
 }
 
+// InstanceIdent instance identification information.
+type InstanceIdent struct {
+	ServiceID string `json:"serviceId"`
+	SubjectID string `json:"subjectId"`
+	Instance  uint64 `json:"instance"`
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/

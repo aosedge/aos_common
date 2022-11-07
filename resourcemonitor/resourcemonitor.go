@@ -107,7 +107,7 @@ type ResourceMonitor struct {
 
 // ResourceMonitorParams instance resourcemonitor parameters.
 type ResourceMonitorParams struct {
-	cloudprotocol.InstanceIdent
+	aostypes.InstanceIdent
 	UID        int
 	GID        int
 	AlertRules *aostypes.ServiceAlertRules
@@ -618,7 +618,7 @@ func prepareSystemAlertItem(parameter string, timestamp time.Time, value uint64)
 }
 
 func prepareInstanceAlertItem(
-	instanceIndent cloudprotocol.InstanceIdent, parameter string, timestamp time.Time, value uint64,
+	instanceIndent aostypes.InstanceIdent, parameter string, timestamp time.Time, value uint64,
 ) cloudprotocol.AlertItem {
 	return cloudprotocol.AlertItem{
 		Timestamp: timestamp,

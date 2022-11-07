@@ -201,13 +201,6 @@ type InstanceFilter struct {
 	Instance  *uint64 `json:"instance,omitempty"`
 }
 
-// InstanceIdent instance identification information.
-type InstanceIdent struct {
-	ServiceID string `json:"serviceId"`
-	SubjectID string `json:"subjectId"`
-	Instance  uint64 `json:"instance"`
-}
-
 // RequestServiceCrashLog request service crash log message.
 type RequestServiceCrashLog struct {
 	InstanceFilter
@@ -276,7 +269,7 @@ type DecryptDataStruct struct {
 
 // StateAcceptance state acceptance message.
 type StateAcceptance struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Checksum string `json:"checksum"`
 	Result   string `json:"result"`
 	Reason   string `json:"reason"`
@@ -284,21 +277,21 @@ type StateAcceptance struct {
 
 // UpdateState state update message.
 type UpdateState struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Checksum string `json:"stateChecksum"`
 	State    string `json:"state"`
 }
 
 // NewState new state structure.
 type NewState struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Checksum string `json:"stateChecksum"`
 	State    string `json:"state"`
 }
 
 // StateRequest state request structure.
 type StateRequest struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Default bool `json:"default"`
 }
 
@@ -334,14 +327,14 @@ type SystemQuotaAlert struct {
 
 // InstanceQuotaAlert instance quota alert structure.
 type InstanceQuotaAlert struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Parameter string `json:"parameter"`
 	Value     uint64 `json:"value"`
 }
 
 // DeviceAllocateAlert device allocate alert structure.
 type DeviceAllocateAlert struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	Device  string `json:"device"`
 	Message string `json:"message"`
 }
@@ -359,7 +352,7 @@ type ResourceValidateAlert struct {
 
 // ServiceInstanceAlert system alert structure.
 type ServiceInstanceAlert struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	AosVersion uint64 `json:"aosVersion"`
 	Message    string `json:"message"`
 }
@@ -385,7 +378,7 @@ type GlobalMonitoringData struct {
 
 // InstanceMonitoringData monitoring data for service.
 type InstanceMonitoringData struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	RAM        uint64 `json:"ram"`
 	CPU        uint64 `json:"cpu"`
 	UsedDisk   uint64 `json:"usedDisk"`
@@ -428,7 +421,7 @@ type ErrorInfo struct {
 
 // InstanceStatus service instance runtime status.
 type InstanceStatus struct {
-	InstanceIdent
+	aostypes.InstanceIdent
 	AosVersion    uint64     `json:"aosVersion"`
 	StateChecksum string     `json:"stateChecksum,omitempty"`
 	RunState      string     `json:"runState"`

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
 	"github.com/aoscloud/aos_common/journalalerts"
 	"github.com/coreos/go-systemd/v22/sdjournal"
@@ -53,7 +54,7 @@ func init() {
  **********************************************************************************************************************/
 
 type instanceInfo struct {
-	instanceIdent cloudprotocol.InstanceIdent
+	instanceIdent aostypes.InstanceIdent
 	aosVersion    uint64
 }
 
@@ -122,7 +123,7 @@ func TestGetSystemError(t *testing.T) {
 	}
 
 	if err = waitAlerts(testSender.alertsChannel, 5*time.Second,
-		cloudprotocol.AlertTagSystemError, cloudprotocol.InstanceIdent{}, 0, messages); err != nil {
+		cloudprotocol.AlertTagSystemError, aostypes.InstanceIdent{}, 0, messages); err != nil {
 		t.Errorf("Result failed: %s", err)
 	}
 }
@@ -143,7 +144,7 @@ func TestGetServiceError(t *testing.T) {
 	defer alertsHandler.Close()
 
 	instanceInfo := instanceInfo{
-		instanceIdent: cloudprotocol.InstanceIdent{
+		instanceIdent: aostypes.InstanceIdent{
 			ServiceID: "alertservice0",
 			SubjectID: "subject0",
 			Instance:  0,
@@ -209,7 +210,7 @@ func TestGetServiceManagerAlerts(t *testing.T) {
 	}
 
 	if err = waitAlerts(testSender.alertsChannel, 5*time.Second, cloudprotocol.AlertTagAosCore,
-		cloudprotocol.InstanceIdent{}, 0, messages); err != nil {
+		aostypes.InstanceIdent{}, 0, messages); err != nil {
 		t.Errorf("Result failed: %s", err)
 	}
 }
@@ -336,7 +337,7 @@ matchLoop:
 
 func (instanceProvider *testInstanceProvider) GetInstanceInfoByID(
 	id string,
-) (ident cloudprotocol.InstanceIdent, aosVersion uint64, err error) {
+) (ident aostypes.InstanceIdent, aosVersion uint64, err error) {
 	instance, ok := instanceProvider.instancesInfo[id]
 	if !ok {
 		return ident, aosVersion, aoserrors.New("Instance does not exist")
@@ -475,7 +476,7 @@ func waitResult(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Durat
 }
 
 func waitAlerts(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Duration,
-	tag string, instance cloudprotocol.InstanceIdent, version uint64, data []string,
+	tag string, instance aostypes.InstanceIdent, version uint64, data []string,
 ) (err error) {
 	return waitResult(alertsChannel, timeout, func(alert cloudprotocol.AlertItem) (success bool, err error) {
 		if alert.Tag != tag {
