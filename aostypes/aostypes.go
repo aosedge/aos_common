@@ -121,6 +121,28 @@ type UnitConfig struct {
 	Nodes         []NodeConfig `json:"nodes"`
 }
 
+// ServiceInfo service info.
+type ServiceInfo struct {
+	VersionInfo
+	ID         string `json:"id"`
+	ProviderID string `json:"providerId"`
+	URL        string `json:"url"`
+	Sha256     []byte `json:"sha256"`
+	Sha512     []byte `json:"sha512"`
+	Size       uint64 `json:"size"`
+}
+
+// LayerInfo layer info.
+type LayerInfo struct {
+	VersionInfo
+	ID     string `json:"id"`
+	Digest string `json:"digest"`
+	URL    string `json:"url"`
+	Sha256 []byte `json:"sha256"`
+	Sha512 []byte `json:"sha512"`
+	Size   uint64 `json:"size"`
+}
+
 // VersionInfo common version structure.
 type VersionInfo struct {
 	AosVersion    uint64 `json:"aosVersion"`
