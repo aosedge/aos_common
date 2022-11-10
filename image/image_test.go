@@ -21,13 +21,16 @@ import (
 	"compress/gzip"
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -35,8 +38,11 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/image"
 	"github.com/aoscloud/aos_common/utils/testtools"
+	"github.com/opencontainers/go-digest"
+	imagespec "github.com/opencontainers/image-spec/specs-go/v1"
 )
 
 /***********************************************************************************************************************
@@ -433,9 +439,102 @@ func TestCopyImageFromGzipArchiveToDevice(t *testing.T) {
 	}
 }
 
+func TestImageManifest(t *testing.T) {
+	fileName := path.Join(workDir, "manifest.json")
+
+	imgConfigDigest, err := generateAndSaveDigest(filepath.Join(workDir, "blobs"), []byte("{}"))
+	if err != nil {
+		t.Fatalf("Can't generate and save digest: %v", err)
+	}
+
+	rootDigest, err := generateAndSaveDigest(workDir, []byte("{}"))
+	if err != nil {
+		t.Fatalf("Can't generate and save digest: %v", err)
+	}
+
+	layerDigest2, err := generateAndSaveDigest(workDir, []byte("{}"))
+	if err != nil {
+		t.Fatalf("Can't generate and save digest: %v", err)
+	}
+
+	manifest := aostypes.ServiceManifest{
+		Manifest: imagespec.Manifest{
+			Config: imagespec.Descriptor{
+				MediaType: "application/vnd.oci.image.config.v1+json",
+				Digest:    imgConfigDigest,
+			},
+			Layers: []imagespec.Descriptor{
+				{
+					MediaType: "application/vnd.aos.image.layer.v1.tar",
+					Digest:    rootDigest,
+				},
+				{
+					MediaType: "application/vnd.aos.image.layer.v1.tar",
+					Digest:    layerDigest2,
+				},
+			},
+		},
+	}
+
+	data, err := json.Marshal(manifest)
+	if err != nil {
+		t.Fatalf("Can't get image manifest: %v", err)
+	}
+
+	if err := ioutil.WriteFile(fileName, data, 0o600); err != nil {
+		t.Fatalf("Can't save manifest file %v", err)
+	}
+
+	serviceManifest, err := image.GetImageManifest(workDir)
+	if err != nil {
+		t.Fatalf("Can't get image manifest: %v", err)
+	}
+
+	if !reflect.DeepEqual(manifest, *serviceManifest) {
+		t.Fatalf("Unexpected manifest data")
+	}
+
+	layers := image.GetLayersFromManifest(serviceManifest)
+	if len(layers) != 1 {
+		t.Fatalf("Unexpected layers count")
+	}
+
+	if layers[0] != layerDigest2.String() {
+		t.Error("Unexpected layer digest")
+	}
+
+	if err = image.ValidateDigest(workDir, manifest.Config.Digest); err != nil {
+		t.Errorf("Can't validate digest")
+	}
+}
+
 /*******************************************************************************
  * Private
  ******************************************************************************/
+
+func generateAndSaveDigest(folder string, data []byte) (retDigest digest.Digest, err error) {
+	fullPath := filepath.Join(folder, "sha256")
+	if err := os.MkdirAll(fullPath, 0o755); err != nil {
+		return retDigest, aoserrors.Wrap(err)
+	}
+
+	h := sha256.New()
+	h.Write(data)
+	retDigest = digest.NewDigest("sha256", h)
+
+	file, err := os.Create(filepath.Join(fullPath, retDigest.Hex()))
+	if err != nil {
+		return retDigest, aoserrors.Wrap(err)
+	}
+	defer file.Close()
+
+	_, err = file.Write(data)
+	if err != nil {
+		return retDigest, aoserrors.Wrap(err)
+	}
+
+	return retDigest, nil
+}
 
 func createTestDir(dirName string, sizeContent int64) (string, error) {
 	tmpFolder := filepath.Join(workDir, dirName)
