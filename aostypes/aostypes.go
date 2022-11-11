@@ -114,8 +114,8 @@ type NodeConfig struct {
 	Priority  uint32         `json:"priority,omitempty"`
 }
 
-// BoardConfig board configuration.
-type BoardConfig struct {
+// UnitConfig board configuration.
+type UnitConfig struct {
 	FormatVersion uint64       `json:"formatVersion"`
 	VendorVersion string       `json:"vendorVersion"`
 	Nodes         []NodeConfig `json:"nodes"`

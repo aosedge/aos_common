@@ -183,7 +183,7 @@ type QueueInfo struct {
 
 // DesiredStatus desired status message.
 type DesiredStatus struct {
-	BoardConfig       []byte             `json:"boardConfig"`
+	UnitConfig        []byte             `json:"unitConfig"`
 	Services          []byte             `json:"services"`
 	Layers            []byte             `json:"layers"`
 	Instances         []byte             `json:"instances"`
@@ -411,12 +411,12 @@ type PushLog struct {
 
 // UnitStatus unit status structure.
 type UnitStatus struct {
-	BoardConfig  []BoardConfigStatus `json:"boardConfig"`
-	Services     []ServiceStatus     `json:"services"`
-	Layers       []LayerStatus       `json:"layers,omitempty"`
-	Components   []ComponentStatus   `json:"components"`
-	Instances    []InstanceStatus    `json:"instances"`
-	UnitSubjects []string            `json:"unitSubjects"`
+	UnitConfig   []UnitConfigStatus `json:"unitConfig"`
+	Services     []ServiceStatus    `json:"services"`
+	Layers       []LayerStatus      `json:"layers,omitempty"`
+	Components   []ComponentStatus  `json:"components"`
+	Instances    []InstanceStatus   `json:"instances"`
+	UnitSubjects []string           `json:"unitSubjects"`
 }
 
 // ErrorInfo error information.
@@ -435,8 +435,8 @@ type InstanceStatus struct {
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
-// BoardConfigStatus board config status.
-type BoardConfigStatus struct {
+// UnitConfigStatus unit config status.
+type UnitConfigStatus struct {
 	VendorVersion string     `json:"vendorVersion"`
 	Status        string     `json:"status"`
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
@@ -527,7 +527,7 @@ type ScheduleRule struct {
 
 // DecodedDesiredStatus decoded desired status.
 type DecodedDesiredStatus struct {
-	BoardConfig       json.RawMessage
+	UnitConfig        json.RawMessage
 	Components        []ComponentInfo
 	Layers            []LayerInfo
 	Services          []ServiceInfo
