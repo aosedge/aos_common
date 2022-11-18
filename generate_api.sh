@@ -6,7 +6,7 @@ OUT_DIR="api"
 
 IAM_SOURCES="iamanager/v4/iamanager.proto"
 
-SM_SOURCES="servicemanager/v2/servicemanager.proto"
+SM_SOURCES="servicemanager/v3/servicemanager.proto"
 
 UM_SOURCES="updatemanager/v1/updatemanager.proto"
 
