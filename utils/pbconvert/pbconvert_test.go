@@ -23,7 +23,7 @@ import (
 
 	"github.com/aoscloud/aos_common/aostypes"
 	"github.com/aoscloud/aos_common/api/cloudprotocol"
-	pb "github.com/aoscloud/aos_common/api/servicemanager/v2"
+	pb "github.com/aoscloud/aos_common/api/servicemanager/v3"
 	"github.com/aoscloud/aos_common/utils/pbconvert"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
