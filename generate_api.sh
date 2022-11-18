@@ -4,10 +4,7 @@
 
 OUT_DIR="api"
 
-IAM_SOURCES=" \
-    iamanager/v2/iamanagerprotected.proto \
-    iamanager/v2/iamanagerpublic.proto \
-    iamanager/v2/iamanagercommon.proto"
+IAM_SOURCES="iamanager/v4/iamanager.proto"
 
 SM_SOURCES="servicemanager/v2/servicemanager.proto"
 
@@ -20,7 +17,7 @@ if [ "$#" -lt 1 ]; then
     exit 1
 fi
 
-create_package_options () {
+create_package_options() {
     go_opt=""
 
     for item in $1; do
@@ -33,7 +30,6 @@ create_package_options () {
 
     echo ${go_opt}
 }
-
 
 COMMON_OPTIONS="--proto_path=${1} --go_out=${OUT_DIR} \
     --go_opt=paths=source_relative --go-grpc_out=${OUT_DIR} --go-grpc_opt=paths=source_relative"
