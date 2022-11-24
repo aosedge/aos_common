@@ -208,6 +208,7 @@ type ServiceConfig struct {
 	Created            time.Time                    `json:"created"`
 	Author             string                       `json:"author"`
 	Hostname           *string                      `json:"hostname,omitempty"`
+	Runner             string                       `json:"runner"`
 	Sysctl             map[string]string            `json:"sysctl,omitempty"`
 	ServiceTTL         *uint64                      `json:"serviceTtl,omitempty"`
 	Quotas             ServiceQuotas                `json:"quotas"`
