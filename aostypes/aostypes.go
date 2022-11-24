@@ -128,6 +128,7 @@ type ServiceInfo struct {
 	VersionInfo
 	ID         string `json:"id"`
 	ProviderID string `json:"providerId"`
+	GID        uint32 `json:"gid"`
 	URL        string `json:"url"`
 	Sha256     []byte `json:"sha256"`
 	Sha512     []byte `json:"sha512"`
@@ -163,7 +164,6 @@ type InstanceIdent struct {
 type InstanceInfo struct {
 	InstanceIdent
 	UID         uint32 `json:"uid"`
-	GID         uint32 `json:"gid"`
 	Priority    uint64 `json:"priority"`
 	StoragePath string `json:"storagePath"`
 	StatePath   string `json:"statePath"`
