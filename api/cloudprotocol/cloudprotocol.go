@@ -433,6 +433,7 @@ type PartitionInfo struct {
 // NodeInfo node information.
 type NodeInfo struct {
 	NodeID     string          `json:"nodeId"`
+	NodeType   string          `json:"nodeType"`
 	NumCPUs    uint64          `json:"numCpus"`
 	TotalRAM   uint64          `json:"totalRam"`
 	Partitions []PartitionInfo `json:"partitions"`
