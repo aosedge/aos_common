@@ -108,8 +108,8 @@ type ResourceInfo struct {
 }
 
 // NodeConfig node configuration.
-type NodeConfig struct {
-	NodeID    string         `json:"nodeId"`
+type NodeUnitConfig struct {
+	NodeType  string         `json:"nodeType"`
 	Devices   []DeviceInfo   `json:"devices,omitempty"`
 	Resources []ResourceInfo `json:"resources,omitempty"`
 	Labels    []string       `json:"labels,omitempty"`
@@ -118,9 +118,9 @@ type NodeConfig struct {
 
 // UnitConfig board configuration.
 type UnitConfig struct {
-	FormatVersion uint64       `json:"formatVersion"`
-	VendorVersion string       `json:"vendorVersion"`
-	Nodes         []NodeConfig `json:"nodes"`
+	FormatVersion uint64           `json:"formatVersion"`
+	VendorVersion string           `json:"vendorVersion"`
+	Nodes         []NodeUnitConfig `json:"nodes"`
 }
 
 // ServiceInfo service info.
