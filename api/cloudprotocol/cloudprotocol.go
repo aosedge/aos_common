@@ -515,10 +515,11 @@ type ComponentInfo struct {
 
 // InstanceInfo decrypted desired instance runtime info.
 type InstanceInfo struct {
-	ServiceID    string `json:"serviceId"`
-	SubjectID    string `json:"subjectId"`
-	Priority     uint64 `json:"priority"`
-	NumInstances uint64 `json:"numInstances"`
+	ServiceID    string   `json:"serviceId"`
+	SubjectID    string   `json:"subjectId"`
+	Priority     uint64   `json:"priority"`
+	NumInstances uint64   `json:"numInstances"`
+	Labels       []string `json:"labels"`
 }
 
 // TimeSlot time slot with start and finish time.
