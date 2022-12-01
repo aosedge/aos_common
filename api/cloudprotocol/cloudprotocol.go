@@ -430,13 +430,18 @@ type PartitionInfo struct {
 	TotalSize uint64   `json:"totalSize"`
 }
 
-// NodeInfo node information.
-type NodeInfo struct {
-	NodeID     string          `json:"nodeId"`
-	NodeType   string          `json:"nodeType"`
+// SystemInfo system information.
+type SystemInfo struct {
 	NumCPUs    uint64          `json:"numCpus"`
 	TotalRAM   uint64          `json:"totalRam"`
 	Partitions []PartitionInfo `json:"partitions"`
+}
+
+// NodeInfo node information.
+type NodeInfo struct {
+	NodeID   string `json:"nodeId"`
+	NodeType string `json:"nodeType"`
+	SystemInfo
 }
 
 // ErrorInfo error information.
