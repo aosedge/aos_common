@@ -38,9 +38,7 @@ const UnitSecretVersion = 2
 // Cloud message types.
 const (
 	DesiredStatusType          = "desiredStatus"
-	RequestServiceCrashLogType = "requestServiceCrashLog"
-	RequestServiceLogType      = "requestServiceLog"
-	RequestSystemLogType       = "requestSystemLog"
+	RequestLogType             = "requestLog"
 	ServiceDiscoveryType       = "serviceDiscovery"
 	StateAcceptanceType        = "stateAcceptance"
 	UpdateStateType            = "updateState"
@@ -115,6 +113,13 @@ const (
 	StatesPartition   = "states"
 	ServicesPartition = "services"
 	LayersPartition   = "layers"
+)
+
+// Log types.
+const (
+	SystemLog  = "systemLog"
+	ServiceLog = "serviceLog"
+	CrashLog   = "crashLog"
 )
 
 /***********************************************************************************************************************
@@ -192,33 +197,24 @@ type QueueInfo struct {
 
 // InstanceFilter instance filter structure.
 type InstanceFilter struct {
-	ServiceID string  `json:"serviceId"`
+	ServiceID *string `json:"serviceId,omitempty"`
 	SubjectID *string `json:"subjectId,omitempty"`
 	Instance  *uint64 `json:"instance,omitempty"`
 }
 
-// RequestServiceCrashLog request service crash log message.
-type RequestServiceCrashLog struct {
+// LogFilter request log message.
+type LogFilter struct {
+	From    *time.Time `json:"from"`
+	Till    *time.Time `json:"till"`
+	NodeIDs []string   `json:"nodeIds,omitempty"`
 	InstanceFilter
-	LogID string     `json:"logId"`
-	From  *time.Time `json:"from"`
-	Till  *time.Time `json:"till"`
 }
 
-// RequestServiceLog request service log message.
-type RequestServiceLog struct {
-	InstanceFilter
-	LogID string     `json:"logId"`
-	From  *time.Time `json:"from"`
-	Till  *time.Time `json:"till"`
-}
-
-// RequestSystemLog request system log message.
-type RequestSystemLog struct {
-	LogID  string     `json:"logId"`
-	NodeID string     `json:"nodeId,omitempty"`
-	From   *time.Time `json:"from"`
-	Till   *time.Time `json:"till"`
+// RequestLog request log message.
+type RequestLog struct {
+	LogID   string    `json:"logId"`
+	LogType string    `json:"logType"`
+	Filter  LogFilter `json:"filter"`
 }
 
 // DecryptionInfo update decryption info.
@@ -405,6 +401,7 @@ type InstanceMonitoringData struct {
 
 // PushLog push service log structure.
 type PushLog struct {
+	NodeID    string `json:"nodeId"`
 	LogID     string `json:"logId"`
 	PartCount uint64 `json:"partCount,omitempty"`
 	Part      uint64 `json:"part,omitempty"`
@@ -674,7 +671,7 @@ func (component ComponentInfo) String() string {
 }
 
 func NewInstanceFilter(serviceID, subjectID string, instance int64) (filter InstanceFilter) {
-	filter.ServiceID = serviceID
+	filter.ServiceID = &serviceID
 
 	if subjectID != "" {
 		filter.SubjectID = &subjectID
