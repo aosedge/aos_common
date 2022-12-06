@@ -28,7 +28,7 @@ import (
  **********************************************************************************************************************/
 
 func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pb.InstanceIdent {
-	ident := &pb.InstanceIdent{ServiceId: filter.ServiceID, SubjectId: "", Instance: -1}
+	ident := &pb.InstanceIdent{ServiceId: *filter.ServiceID, SubjectId: "", Instance: -1}
 
 	if filter.SubjectID != nil {
 		ident.SubjectId = *filter.SubjectID
