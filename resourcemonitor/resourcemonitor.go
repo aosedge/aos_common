@@ -54,6 +54,11 @@ const (
 // 5 - RAM, CPU, UsedDisk, InTraffic, OutTraffic.
 const capacityAlertProcessorElements = 5
 
+const (
+	CPUSafeLimit = 20
+	RAMSafeimit  = 50 * 1024
+)
+
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
@@ -457,6 +462,18 @@ func (monitor *ResourceMonitor) gatheringSystemInfo() (err error) {
 	}
 
 	monitor.systemInfo.TotalRAM = memStat.Total
+
+	if monitor.config.AlertRules.CPU != nil {
+		monitor.systemInfo.CPUThreshold = monitor.config.AlertRules.CPU.MaxThreshold
+	} else {
+		monitor.systemInfo.CPUThreshold = monitor.systemInfo.NumCPUs*100 - CPUSafeLimit
+	}
+
+	if monitor.config.AlertRules.RAM != nil {
+		monitor.systemInfo.RAMThreshold = monitor.config.AlertRules.RAM.MaxThreshold
+	} else {
+		monitor.systemInfo.RAMThreshold = monitor.systemInfo.TotalRAM - RAMSafeimit
+	}
 
 	monitor.systemInfo.Partitions = make([]cloudprotocol.PartitionInfo, len(monitor.config.Partitions))
 	for i, partition := range monitor.config.Partitions {

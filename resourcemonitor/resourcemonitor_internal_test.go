@@ -328,6 +328,10 @@ func TestGetSystemInfo(t *testing.T) {
 				}},
 				SendPeriod: aostypes.Duration{Duration: duration},
 				PollPeriod: aostypes.Duration{Duration: duration},
+				AlertRules: aostypes.AlertRules{
+					RAM: &aostypes.AlertRuleParam{MaxThreshold: 800},
+					CPU: &aostypes.AlertRuleParam{MaxThreshold: 199},
+				},
 			},
 			quotaData: testQuotaData{
 				cores:     2,
@@ -335,8 +339,10 @@ func TestGetSystemInfo(t *testing.T) {
 				totalDisk: 1000,
 			},
 			expectedSystemInfo: cloudprotocol.SystemInfo{
-				NumCPUs:  2,
-				TotalRAM: 1000,
+				NumCPUs:      2,
+				CPUThreshold: 199,
+				TotalRAM:     1000,
+				RAMThreshold: 800,
 				Partitions: []cloudprotocol.PartitionInfo{
 					{
 						Name:      cloudprotocol.GenericPartition,
@@ -358,12 +364,14 @@ func TestGetSystemInfo(t *testing.T) {
 			},
 			quotaData: testQuotaData{
 				cores:     3,
-				totalRam:  2000,
+				totalRam:  200000,
 				totalDisk: 4000,
 			},
 			expectedSystemInfo: cloudprotocol.SystemInfo{
-				NumCPUs:  3,
-				TotalRAM: 2000,
+				NumCPUs:      3,
+				CPUThreshold: 280,
+				TotalRAM:     200000,
+				RAMThreshold: (200000 - (50 * 1024)),
 				Partitions: []cloudprotocol.PartitionInfo{
 					{
 						Name:      cloudprotocol.StatesPartition,
