@@ -64,8 +64,10 @@ func TestNewInstanceFilter(t *testing.T) {
 
 	testData := []testFilter{
 		{
-			expectedFilter: cloudprotocol.InstanceFilter{ServiceID: &serviceID, SubjectID: &subject, Instance: &instance},
-			constructData:  filterConstructData{serviceID: "s1", subjectID: "subj1", instance: 2},
+			expectedFilter: cloudprotocol.InstanceFilter{
+				ServiceID: &serviceID, SubjectID: &subject, Instance: &instance,
+			},
+			constructData: filterConstructData{serviceID: "s1", subjectID: "subj1", instance: 2},
 		},
 		{
 			expectedFilter: cloudprotocol.InstanceFilter{ServiceID: &serviceID, SubjectID: nil, Instance: &instance},
