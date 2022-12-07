@@ -432,9 +432,11 @@ type PartitionInfo struct {
 
 // SystemInfo system information.
 type SystemInfo struct {
-	NumCPUs    uint64          `json:"numCpus"`
-	TotalRAM   uint64          `json:"totalRam"`
-	Partitions []PartitionInfo `json:"partitions"`
+	NumCPUs      uint64          `json:"numCpus"`
+	CPUThreshold uint64          `json:"cpuThreshold"`
+	TotalRAM     uint64          `json:"totalRam"`
+	RAMThreshold uint64          `json:"ramThreshold"`
+	Partitions   []PartitionInfo `json:"partitions"`
 }
 
 // NodeInfo node information.
