@@ -60,20 +60,26 @@ type Time struct {
 	time.Time
 }
 
-// AlertRule describes alert rule.
-type AlertRule struct {
+// AlertRuleParam describes alert rule.
+type AlertRuleParam struct {
 	MinTimeout   Duration `json:"minTimeout"`
 	MinThreshold uint64   `json:"minThreshold"`
 	MaxThreshold uint64   `json:"maxThreshold"`
 }
 
-// ServiceAlertRules define service monitoring alerts rules.
-type ServiceAlertRules struct {
-	RAM        *AlertRule `json:"ram,omitempty"`
-	CPU        *AlertRule `json:"cpu,omitempty"`
-	UsedDisk   *AlertRule `json:"usedDisk,omitempty"`
-	InTraffic  *AlertRule `json:"inTraffic,omitempty"`
-	OutTraffic *AlertRule `json:"outTraffic,omitempty"`
+// PartitionAlertRuleParam describes alert rule.
+type PartitionAlertRuleParam struct {
+	AlertRuleParam
+	Name string `json:"name"`
+}
+
+// AlertRules define service monitoring alerts rules.
+type AlertRules struct {
+	RAM        *AlertRuleParam           `json:"ram,omitempty"`
+	CPU        *AlertRuleParam           `json:"cpu,omitempty"`
+	UsedDisks  []PartitionAlertRuleParam `json:"usedDisks,omitempty"`
+	InTraffic  *AlertRuleParam           `json:"inTraffic,omitempty"`
+	OutTraffic *AlertRuleParam           `json:"outTraffic,omitempty"`
 }
 
 // FileSystemMount specifies a mount instructions.
@@ -216,7 +222,7 @@ type ServiceConfig struct {
 	Devices            []ServiceDevice              `json:"devices,omitempty"`
 	Resources          []string                     `json:"resources,omitempty"`
 	Permissions        map[string]map[string]string `json:"permissions,omitempty"`
-	AlertRules         *ServiceAlertRules           `json:"alertRules,omitempty"`
+	AlertRules         *AlertRules                  `json:"alertRules,omitempty"`
 	RunParameters      RunParameters                `json:"runParameters,omitempty"`
 }
 
