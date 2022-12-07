@@ -67,7 +67,7 @@ type testTrafficMonitoring struct {
 type testQuotaData struct {
 	cpu       float64
 	ram       uint64
-	totalRam  uint64
+	totalRAM  uint64
 	disk      uint64
 	totalDisk uint64
 	cores     int
@@ -331,7 +331,7 @@ func TestGetSystemInfo(t *testing.T) {
 			},
 			quotaData: testQuotaData{
 				cores:     2,
-				totalRam:  1000,
+				totalRAM:  1000,
 				totalDisk: 1000,
 			},
 			expectedSystemInfo: cloudprotocol.SystemInfo{
@@ -358,7 +358,7 @@ func TestGetSystemInfo(t *testing.T) {
 			},
 			quotaData: testQuotaData{
 				cores:     3,
-				totalRam:  2000,
+				totalRAM:  2000,
 				totalDisk: 4000,
 			},
 			expectedSystemInfo: cloudprotocol.SystemInfo{
@@ -850,7 +850,7 @@ func getSystemCPUPersent(interval time.Duration, percpu bool) (persent []float64
 }
 
 func getSystemRAM() (virtualMemory *mem.VirtualMemoryStat, err error) {
-	return &mem.VirtualMemoryStat{Used: systemQuotaData.ram, Total: systemQuotaData.totalRam}, nil
+	return &mem.VirtualMemoryStat{Used: systemQuotaData.ram, Total: systemQuotaData.totalRAM}, nil
 }
 
 func getSystemDisk(path string) (diskUsage *disk.UsageStat, err error) {
