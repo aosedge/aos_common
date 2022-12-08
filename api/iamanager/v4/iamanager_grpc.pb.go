@@ -24,7 +24,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type IAMPublicServiceClient interface {
 	GetAPIVersion(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*APIVersion, error)
-	GetNodeID(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeID, error)
+	GetNodeInfo(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeInfo, error)
 	GetCert(ctx context.Context, in *GetCertRequest, opts ...grpc.CallOption) (*GetCertResponse, error)
 }
 
@@ -45,9 +45,9 @@ func (c *iAMPublicServiceClient) GetAPIVersion(ctx context.Context, in *empty.Em
 	return out, nil
 }
 
-func (c *iAMPublicServiceClient) GetNodeID(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeID, error) {
-	out := new(NodeID)
-	err := c.cc.Invoke(ctx, "/iamanager.v4.IAMPublicService/GetNodeID", in, out, opts...)
+func (c *iAMPublicServiceClient) GetNodeInfo(ctx context.Context, in *empty.Empty, opts ...grpc.CallOption) (*NodeInfo, error) {
+	out := new(NodeInfo)
+	err := c.cc.Invoke(ctx, "/iamanager.v4.IAMPublicService/GetNodeInfo", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +68,7 @@ func (c *iAMPublicServiceClient) GetCert(ctx context.Context, in *GetCertRequest
 // for forward compatibility
 type IAMPublicServiceServer interface {
 	GetAPIVersion(context.Context, *empty.Empty) (*APIVersion, error)
-	GetNodeID(context.Context, *empty.Empty) (*NodeID, error)
+	GetNodeInfo(context.Context, *empty.Empty) (*NodeInfo, error)
 	GetCert(context.Context, *GetCertRequest) (*GetCertResponse, error)
 	mustEmbedUnimplementedIAMPublicServiceServer()
 }
@@ -80,8 +80,8 @@ type UnimplementedIAMPublicServiceServer struct {
 func (UnimplementedIAMPublicServiceServer) GetAPIVersion(context.Context, *empty.Empty) (*APIVersion, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAPIVersion not implemented")
 }
-func (UnimplementedIAMPublicServiceServer) GetNodeID(context.Context, *empty.Empty) (*NodeID, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetNodeID not implemented")
+func (UnimplementedIAMPublicServiceServer) GetNodeInfo(context.Context, *empty.Empty) (*NodeInfo, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetNodeInfo not implemented")
 }
 func (UnimplementedIAMPublicServiceServer) GetCert(context.Context, *GetCertRequest) (*GetCertResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCert not implemented")
@@ -117,20 +117,20 @@ func _IAMPublicService_GetAPIVersion_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
-func _IAMPublicService_GetNodeID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+func _IAMPublicService_GetNodeInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(empty.Empty)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(IAMPublicServiceServer).GetNodeID(ctx, in)
+		return srv.(IAMPublicServiceServer).GetNodeInfo(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/iamanager.v4.IAMPublicService/GetNodeID",
+		FullMethod: "/iamanager.v4.IAMPublicService/GetNodeInfo",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(IAMPublicServiceServer).GetNodeID(ctx, req.(*empty.Empty))
+		return srv.(IAMPublicServiceServer).GetNodeInfo(ctx, req.(*empty.Empty))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -165,8 +165,8 @@ var IAMPublicService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _IAMPublicService_GetAPIVersion_Handler,
 		},
 		{
-			MethodName: "GetNodeID",
-			Handler:    _IAMPublicService_GetNodeID_Handler,
+			MethodName: "GetNodeInfo",
+			Handler:    _IAMPublicService_GetNodeInfo_Handler,
 		},
 		{
 			MethodName: "GetCert",
