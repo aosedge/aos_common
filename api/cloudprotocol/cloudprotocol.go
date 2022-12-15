@@ -126,6 +126,12 @@ const (
  * Types
  **********************************************************************************************************************/
 
+// ReceivedMessage structure for Aos incoming messages.
+type ReceivedMessage struct {
+	Header MessageHeader `json:"header"`
+	Data   []byte        `json:"data"`
+}
+
 // Message structure for AOS messages.
 type Message struct {
 	Header MessageHeader `json:"header"`
