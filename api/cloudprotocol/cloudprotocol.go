@@ -411,7 +411,7 @@ type PushLog struct {
 	LogID     string `json:"logId"`
 	PartCount uint64 `json:"partCount,omitempty"`
 	Part      uint64 `json:"part,omitempty"`
-	Data      []byte `json:"data,omitempty"`
+	Content   []byte `json:"content,omitempty"`
 	Error     string `json:"error,omitempty"`
 }
 
