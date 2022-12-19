@@ -77,7 +77,7 @@ type TrafficMonitoring interface {
 // PartitionConfig partition information.
 type PartitionConfig struct {
 	Name  string   `json:"name"`
-	Types []string `json:"type"`
+	Types []string `json:"types"`
 	Path  string   `json:"path"`
 }
 
@@ -472,7 +472,7 @@ func (monitor *ResourceMonitor) gatheringSystemInfo() (err error) {
 	monitor.systemInfo.Partitions = make([]cloudprotocol.PartitionInfo, len(monitor.config.Partitions))
 	for i, partition := range monitor.config.Partitions {
 		monitor.systemInfo.Partitions[i].Name = partition.Name
-		monitor.systemInfo.Partitions[i].Type = append(monitor.systemInfo.Partitions[i].Type, partition.Types...)
+		monitor.systemInfo.Partitions[i].Types = append(monitor.systemInfo.Partitions[i].Types, partition.Types...)
 
 		usageStat, err := systemDiskUsage(partition.Path)
 		if err != nil {
