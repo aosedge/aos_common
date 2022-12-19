@@ -429,7 +429,7 @@ type UnitStatus struct {
 // PartitionInfo partition information.
 type PartitionInfo struct {
 	Name      string   `json:"name"`
-	Type      []string `json:"type"`
+	Types     []string `json:"types"`
 	TotalSize uint64   `json:"totalSize"`
 }
 

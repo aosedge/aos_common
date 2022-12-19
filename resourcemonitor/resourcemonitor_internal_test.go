@@ -340,7 +340,7 @@ func TestGetSystemInfo(t *testing.T) {
 				Partitions: []cloudprotocol.PartitionInfo{
 					{
 						Name:      cloudprotocol.GenericPartition,
-						Type:      []string{"storage"},
+						Types:     []string{"storage"},
 						TotalSize: 1000,
 					},
 				},
@@ -367,7 +367,7 @@ func TestGetSystemInfo(t *testing.T) {
 				Partitions: []cloudprotocol.PartitionInfo{
 					{
 						Name:      cloudprotocol.StatesPartition,
-						Type:      []string{"state"},
+						Types:     []string{"state"},
 						TotalSize: 4000,
 					},
 				},
