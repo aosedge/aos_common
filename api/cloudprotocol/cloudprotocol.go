@@ -407,12 +407,12 @@ type InstanceMonitoringData struct {
 
 // PushLog push service log structure.
 type PushLog struct {
-	NodeID    string `json:"nodeId"`
-	LogID     string `json:"logId"`
-	PartCount uint64 `json:"partCount,omitempty"`
-	Part      uint64 `json:"part,omitempty"`
-	Content   []byte `json:"content,omitempty"`
-	Error     string `json:"error,omitempty"`
+	NodeID     string    `json:"nodeId"`
+	LogID      string    `json:"logId"`
+	PartsCount uint64    `json:"partsCount,omitempty"`
+	Part       uint64    `json:"part,omitempty"`
+	Content    []byte    `json:"content,omitempty"`
+	ErrorInfo  ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // UnitStatus unit status structure.
