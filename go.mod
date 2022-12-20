@@ -7,6 +7,7 @@ replace github.com/ThalesIgnite/crypto11 => github.com/aoscloud/crypto11 v1.0.3-
 require (
 	github.com/ThalesIgnite/crypto11 v0.0.0-00010101000000-000000000000
 	github.com/anexia-it/fsquota v0.1.3
+	github.com/bwesterb/go-xentop v1.0.1
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/golang-migrate/migrate/v4 v4.15.0
