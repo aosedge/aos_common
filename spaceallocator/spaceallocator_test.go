@@ -287,7 +287,7 @@ func TestOutdatedItems(t *testing.T) {
 
 	removedFiles := make([]string, 0)
 
-	allocator, err := spaceallocator.New(mountPoint, 0, func(id string) error {
+	allocator, err := spaceallocator.New(mountPoint, 100, func(id string) error {
 		removedFiles = append(removedFiles, id)
 
 		if err := os.RemoveAll(filepath.Join(mountPoint, id)); err != nil {
