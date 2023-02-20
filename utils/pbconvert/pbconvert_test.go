@@ -102,3 +102,28 @@ func TestInstanceIdentFromPB(t *testing.T) {
 		t.Error("Incorrect instance")
 	}
 }
+
+func TestNetworkParametersToPB(t *testing.T) {
+	expectedNetwork := &pb.NetworkParameters{
+		Ip:     "172.18.0.1",
+		Subnet: "172.18.0.0/16",
+	}
+
+	pbNetwork := pbconvert.NetworkParametersToPB(
+		aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16"})
+
+	if !proto.Equal(pbNetwork, expectedNetwork) {
+		t.Error("Incorrect network parameters")
+	}
+}
+
+func TestNetworkParametersFromPB(t *testing.T) {
+	expectedNetwork := aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16"}
+
+	receivedNetwork := pbconvert.NewNetworkParametersFromPB(
+		&pb.NetworkParameters{Ip: "172.18.0.1", Subnet: "172.18.0.0/16"})
+
+	if expectedNetwork != receivedNetwork {
+		t.Error("Incorrect network parameters")
+	}
+}
