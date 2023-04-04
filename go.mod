@@ -26,13 +26,14 @@ require (
 )
 
 require (
-	github.com/docker/docker v17.12.1-ce+incompatible // indirect
+	github.com/docker/docker v20.10.24+incompatible // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/miekg/pkcs11 v1.0.3 // indirect
-	github.com/opencontainers/selinux v1.10.2 // indirect
+	github.com/moby/sys/mount v0.3.3 // indirect
+	github.com/moby/sys/mountinfo v0.6.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/speijnik/go-errortree v1.0.1 // indirect
 	github.com/thales-e-security/pool v0.0.2 // indirect
