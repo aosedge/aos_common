@@ -19,6 +19,7 @@ package pbconvert_test
 
 import (
 	"os"
+	"reflect"
 	"testing"
 
 	"github.com/aoscloud/aos_common/aostypes"
@@ -105,12 +106,13 @@ func TestInstanceIdentFromPB(t *testing.T) {
 
 func TestNetworkParametersToPB(t *testing.T) {
 	expectedNetwork := &pb.NetworkParameters{
-		Ip:     "172.18.0.1",
-		Subnet: "172.18.0.0/16",
+		Ip:         "172.18.0.1",
+		Subnet:     "172.18.0.0/16",
+		DnsServers: []string{"10.10.0.1"},
 	}
 
 	pbNetwork := pbconvert.NetworkParametersToPB(
-		aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16"})
+		aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16", DNSServers: []string{"10.10.0.1"}})
 
 	if !proto.Equal(pbNetwork, expectedNetwork) {
 		t.Error("Incorrect network parameters")
@@ -118,12 +120,14 @@ func TestNetworkParametersToPB(t *testing.T) {
 }
 
 func TestNetworkParametersFromPB(t *testing.T) {
-	expectedNetwork := aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16"}
+	expectedNetwork := aostypes.NetworkParameters{
+		IP: "172.18.0.1", Subnet: "172.18.0.0/16", DNSServers: []string{"10.10.0.1"},
+	}
 
 	receivedNetwork := pbconvert.NewNetworkParametersFromPB(
-		&pb.NetworkParameters{Ip: "172.18.0.1", Subnet: "172.18.0.0/16"})
+		&pb.NetworkParameters{Ip: "172.18.0.1", Subnet: "172.18.0.0/16", DnsServers: []string{"10.10.0.1"}})
 
-	if expectedNetwork != receivedNetwork {
+	if !reflect.DeepEqual(expectedNetwork, receivedNetwork) {
 		t.Error("Incorrect network parameters")
 	}
 }
