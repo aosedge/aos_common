@@ -109,10 +109,30 @@ func TestNetworkParametersToPB(t *testing.T) {
 		Ip:         "172.18.0.1",
 		Subnet:     "172.18.0.0/16",
 		DnsServers: []string{"10.10.0.1"},
+		Rules: []*pb.FirewallRule{
+			{
+				Proto:   "tcp",
+				DstIp:   "172.19.0.1",
+				SrcIp:   "172.18.0.1",
+				DstPort: "8080",
+			},
+		},
 	}
 
 	pbNetwork := pbconvert.NetworkParametersToPB(
-		aostypes.NetworkParameters{IP: "172.18.0.1", Subnet: "172.18.0.0/16", DNSServers: []string{"10.10.0.1"}})
+		aostypes.NetworkParameters{
+			IP:         "172.18.0.1",
+			Subnet:     "172.18.0.0/16",
+			DNSServers: []string{"10.10.0.1"},
+			FirewallRules: []aostypes.FirewallRule{
+				{
+					Proto:   "tcp",
+					DstIP:   "172.19.0.1",
+					SrcIP:   "172.18.0.1",
+					DstPort: "8080",
+				},
+			},
+		})
 
 	if !proto.Equal(pbNetwork, expectedNetwork) {
 		t.Error("Incorrect network parameters")
@@ -121,11 +141,33 @@ func TestNetworkParametersToPB(t *testing.T) {
 
 func TestNetworkParametersFromPB(t *testing.T) {
 	expectedNetwork := aostypes.NetworkParameters{
-		IP: "172.18.0.1", Subnet: "172.18.0.0/16", DNSServers: []string{"10.10.0.1"},
+		IP:         "172.18.0.1",
+		Subnet:     "172.18.0.0/16",
+		DNSServers: []string{"10.10.0.1"},
+		FirewallRules: []aostypes.FirewallRule{
+			{
+				Proto:   "tcp",
+				DstIP:   "172.19.0.1",
+				SrcIP:   "172.18.0.1",
+				DstPort: "8080",
+			},
+		},
 	}
 
 	receivedNetwork := pbconvert.NewNetworkParametersFromPB(
-		&pb.NetworkParameters{Ip: "172.18.0.1", Subnet: "172.18.0.0/16", DnsServers: []string{"10.10.0.1"}})
+		&pb.NetworkParameters{
+			Ip:         "172.18.0.1",
+			Subnet:     "172.18.0.0/16",
+			DnsServers: []string{"10.10.0.1"},
+			Rules: []*pb.FirewallRule{
+				{
+					Proto:   "tcp",
+					DstIp:   "172.19.0.1",
+					SrcIp:   "172.18.0.1",
+					DstPort: "8080",
+				},
+			},
+		})
 
 	if !reflect.DeepEqual(expectedNetwork, receivedNetwork) {
 		t.Error("Incorrect network parameters")
