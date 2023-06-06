@@ -71,6 +71,10 @@ func TestInstanceFilterToPB(t *testing.T) {
 			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "", Instance: -1},
 			filter:        cloudprotocol.NewInstanceFilter("s1", "", -1),
 		},
+		{
+			expectedIdent: &pb.InstanceIdent{ServiceId: "", SubjectId: "", Instance: -1},
+			filter:        cloudprotocol.NewInstanceFilter("", "", -1),
+		},
 	}
 
 	for _, testItem := range testData {
