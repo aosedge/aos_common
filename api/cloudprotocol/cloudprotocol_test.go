@@ -81,6 +81,10 @@ func TestNewInstanceFilter(t *testing.T) {
 			expectedFilter: cloudprotocol.InstanceFilter{ServiceID: &serviceID},
 			constructData:  filterConstructData{serviceID: "s1", subjectID: "", instance: -1},
 		},
+		{
+			expectedFilter: cloudprotocol.InstanceFilter{},
+			constructData:  filterConstructData{serviceID: "", subjectID: "", instance: -1},
+		},
 	}
 
 	for _, testItem := range testData {
