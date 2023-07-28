@@ -103,7 +103,9 @@ func Download(ctx context.Context, destination, url string) (fileName string, er
 	for {
 		select {
 		case <-timer.C:
-			log.WithFields(log.Fields{"complete": resp.BytesComplete(), "total": resp.Size}).Debug("Download progress")
+			log.WithFields(log.Fields{
+				"complete": resp.BytesComplete(), "total": resp.Size(),
+			}).Debug("Download progress")
 
 		case <-resp.Done:
 			if err := resp.Err(); err != nil {
