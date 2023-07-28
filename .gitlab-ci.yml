@@ -1,4 +1,4 @@
-image: golang:1.14
+image: golang:1.20
 
 stages:
   - build
@@ -11,13 +11,12 @@ build:
   stage: build
 
   before_script:
-  - apt-get update
-  - apt-get install -y libblkid-dev
+    - apt-get update
+    - apt-get install -y libblkid-dev
 
   script:
     - echo "-------   Start Build   -------"
     - /usr/local/go/bin/go build ./...
-
 
 test:
   tags:
@@ -25,10 +24,10 @@ test:
   stage: test
 
   before_script:
-  - apt-get update
-  - apt-get install -y libblkid-dev
-  - apt-get install -y parted
-  - apt-get install -y dosfstools
+    - apt-get update
+    - apt-get install -y libblkid-dev
+    - apt-get install -y parted
+    - apt-get install -y dosfstools
 
   script:
     - echo "-------   Run Unit tests   -------"
@@ -38,8 +37,8 @@ test:
 whitesource:
   only:
     refs:
-     - master
-     - develop
+      - master
+      - develop
   tags:
     - whitesource_ci
   stage: dependency
