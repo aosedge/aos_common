@@ -85,11 +85,9 @@ func (cmd testShellCommand) CombinedOutput() ([]byte, error) {
 	header := "   NAME  STATE   CPU(sec) CPU(%)     MEM(k) MEM(%)  MAXMEM(k) MAXMEM(%) VCPUS NETS NETTX(k) NETRX(k) " +
 		"VBDS   VBD_OO   VBD_RD   VBD_WR  VBD_RSECT  VBD_WSECT SSID"
 
-	//nolint:dupword
 	dom0 := "Domain-0 -----r        487    0.0     737280    8.9   no limit       n/a     4    0        0        0 " +
 		"0        0        0        0          0          0    2"
 
-	//nolint:dupword
 	domD := "   DomD --b---        180    0.0    2084104   25.2    2098176      25.4     4    0        0        0 " +
 		"0        0        0        0          0          0   14"
 

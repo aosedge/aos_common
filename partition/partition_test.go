@@ -18,7 +18,6 @@
 package partition_test
 
 import (
-	"io/ioutil"
 	"os"
 	"path"
 	"testing"
@@ -60,7 +59,7 @@ func init() {
 func TestMain(m *testing.M) {
 	var err error
 
-	if tmpDir, err = ioutil.TempDir("", "um_"); err != nil {
+	if tmpDir, err = os.MkdirTemp("", "um_"); err != nil {
 		log.Fatalf("Error creating tmp dir: %s", err)
 	}
 

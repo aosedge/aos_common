@@ -18,7 +18,6 @@
 package fs_test
 
 import (
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -65,7 +64,7 @@ func init() {
 func TestMain(m *testing.M) {
 	var err error
 
-	if tmpDir, err = ioutil.TempDir("", "um_"); err != nil {
+	if tmpDir, err = os.MkdirTemp("", "um_"); err != nil {
 		log.Fatalf("Error creating tmp dir: %s", err)
 	}
 
@@ -202,7 +201,7 @@ func TestGetDirSize(t *testing.T) {
 		t.Fatalf("Can't create dir content: %s", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(firstDir, "file0"), []byte("content"), 0o600); err != nil {
+	if err := os.WriteFile(path.Join(firstDir, "file0"), []byte("content"), 0o600); err != nil {
 		return
 	}
 

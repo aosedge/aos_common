@@ -25,7 +25,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
@@ -81,7 +80,7 @@ func init() {
 func TestMain(m *testing.M) {
 	var err error
 
-	if workDir, err = ioutil.TempDir("", "aos_"); err != nil {
+	if workDir, err = os.MkdirTemp("", "aos_"); err != nil {
 		log.Fatalf("Error create work dir: %s", err)
 	}
 
@@ -111,7 +110,7 @@ func TestUntarGZArchive(t *testing.T) {
 	}
 
 	// test invalid archive
-	if err := ioutil.WriteFile(path.Join(workDir, "testArchive.tar.gz"),
+	if err := os.WriteFile(path.Join(workDir, "testArchive.tar.gz"),
 		[]byte("This is test file"), 0o600); err != nil {
 		t.Fatalf("Can't write test file: %s", err)
 	}
@@ -130,12 +129,12 @@ func TestUntarGZArchive(t *testing.T) {
 		t.Fatalf("Error creating tmp dir %s", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(workDir, "archive_folder", "file.txt"),
+	if err := os.WriteFile(path.Join(workDir, "archive_folder", "file.txt"),
 		[]byte("This is test file"), 0o600); err != nil {
 		t.Fatalf("Can't write test file: %s", err)
 	}
 
-	if err := ioutil.WriteFile(path.Join(workDir, "archive_folder", "dir1", "file2.txt"),
+	if err := os.WriteFile(path.Join(workDir, "archive_folder", "dir1", "file2.txt"),
 		[]byte("This is test file2"), 0o600); err != nil {
 		t.Fatalf("Can't write test file: %s", err)
 	}
@@ -173,7 +172,7 @@ func TestDownload(t *testing.T) {
 func TestCreateFileInfo(t *testing.T) {
 	fileNamePath := path.Join(workDir, "file")
 
-	if err := ioutil.WriteFile(fileNamePath, []byte("Hello"), filePerm); err != nil {
+	if err := os.WriteFile(fileNamePath, []byte("Hello"), filePerm); err != nil {
 		t.Fatalf("Error create a new file: %s", err)
 	}
 
@@ -224,7 +223,7 @@ func TestCreateFileInfo(t *testing.T) {
 func TestCheckFileInfo(t *testing.T) {
 	fileNamePath := path.Join(workDir, "file")
 
-	if err := ioutil.WriteFile(fileNamePath, []byte("Hello"), filePerm); err != nil {
+	if err := os.WriteFile(fileNamePath, []byte("Hello"), filePerm); err != nil {
 		t.Fatalf("Error create a new file: %s", fileNamePath)
 	}
 
@@ -481,7 +480,7 @@ func TestImageManifest(t *testing.T) {
 		t.Fatalf("Can't get image manifest: %v", err)
 	}
 
-	if err := ioutil.WriteFile(fileName, data, 0o600); err != nil {
+	if err := os.WriteFile(fileName, data, 0o600); err != nil {
 		t.Fatalf("Can't save manifest file %v", err)
 	}
 

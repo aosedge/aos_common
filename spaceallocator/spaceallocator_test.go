@@ -21,7 +21,6 @@ import (
 	"bytes"
 	"errors"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -77,7 +76,7 @@ func init() {
 func TestMain(m *testing.M) {
 	var err error
 
-	tmpDir, err = ioutil.TempDir("", "aos_")
+	tmpDir, err = os.MkdirTemp("", "aos_")
 	if err != nil {
 		log.Fatalf("Error creating tmp dir: %v", err)
 	}

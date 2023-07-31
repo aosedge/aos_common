@@ -25,7 +25,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"os/exec"
@@ -275,7 +274,7 @@ func UnpackTarImage(source, destination string) error {
 
 // GetImageManifest  gets image manifest data from file.
 func GetImageManifest(imagePath string) (*aostypes.ServiceManifest, error) {
-	manifestJSON, err := ioutil.ReadFile(path.Join(imagePath, manifestFileName))
+	manifestJSON, err := os.ReadFile(path.Join(imagePath, manifestFileName))
 	if err != nil {
 		return nil, aoserrors.Wrap(err)
 	}

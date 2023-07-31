@@ -20,7 +20,6 @@ package migration_test
 import (
 	"database/sql"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -258,7 +257,7 @@ func TestMergeMigrationFiles(t *testing.T) {
 		t.Fatalf("Can't merge migration files %s", err)
 	}
 
-	destFiles, err := ioutil.ReadDir(destDir)
+	destFiles, err := os.ReadDir(destDir)
 	if err != nil {
 		t.Fatalf("Can't read destination directory")
 	}

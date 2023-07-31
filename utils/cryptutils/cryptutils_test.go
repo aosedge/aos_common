@@ -28,7 +28,6 @@ import (
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/url"
 	"os"
@@ -55,7 +54,7 @@ var tmpDir string
 func TestMain(m *testing.M) {
 	var err error
 
-	tmpDir, err = ioutil.TempDir("", "aos_")
+	tmpDir, err = os.MkdirTemp("", "aos_")
 	if err != nil {
 		log.Fatalf("Error create temporary dir: %s", err)
 	}
@@ -366,7 +365,7 @@ func TestCertificate(t *testing.T) {
 		t.Errorf("Can't save certificate: %s", err)
 	}
 
-	storedCert, err := ioutil.ReadFile(certFile)
+	storedCert, err := os.ReadFile(certFile)
 	if err != nil {
 		t.Fatalf("Can't read file: %s", err)
 	}
@@ -398,7 +397,7 @@ func TestGetTLSConfig(t *testing.T) {
 		t.Fatalf("Can't generate certificate: %v", err)
 	}
 
-	tlsDir, err := ioutil.TempDir(tmpDir, "tlsconfig")
+	tlsDir, err := os.MkdirTemp(tmpDir, "tlsconfig")
 	if err != nil {
 		t.Fatalf("Can't create TLS config dir: %s", err)
 	}
@@ -425,7 +424,7 @@ func TestGetTLSConfig(t *testing.T) {
 
 	rootCAPath := path.Join(tlsDir, "root."+cryptutils.PEMExt)
 
-	if err = ioutil.WriteFile(rootCAPath, cryptutils.CertToPEM(caCert), 0o600); err != nil {
+	if err = os.WriteFile(rootCAPath, cryptutils.CertToPEM(caCert), 0o600); err != nil {
 		t.Fatalf("Can't save certificate: %s", err)
 	}
 
@@ -457,7 +456,7 @@ func TestGetTLSConfig(t *testing.T) {
  **********************************************************************************************************************/
 
 func savePEMFile(data []byte) (fileName string, err error) {
-	file, err := ioutil.TempFile(tmpDir, "*."+cryptutils.PEMExt)
+	file, err := os.CreateTemp(tmpDir, "*."+cryptutils.PEMExt)
 	if err != nil {
 		return "", aoserrors.Wrap(err)
 	}

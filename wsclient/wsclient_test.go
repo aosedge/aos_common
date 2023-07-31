@@ -20,7 +20,6 @@ package wsclient_test
 import (
 	"crypto/rsa"
 	"encoding/json"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -85,7 +84,7 @@ func init() {
  **********************************************************************************************************************/
 
 func TestMain(m *testing.M) {
-	tmpDir, err := ioutil.TempDir("", "aos_")
+	tmpDir, err := os.MkdirTemp("", "aos_")
 	if err != nil {
 		log.Fatalf("Error create temporary dir: %s", err)
 	}
@@ -109,18 +108,18 @@ func TestMain(m *testing.M) {
 
 func TestSendRequest(t *testing.T) {
 	type Header struct {
-		Type      string
-		RequestID string
+		Type      string `json:"type"`
+		RequestID string `json:"requestId"`
 	}
 
 	type Request struct {
-		Header Header
-		Value  int
+		Header Header `json:"header"`
+		Value  int    `json:"value"`
 	}
 
 	type Response struct {
-		Header Header
-		Value  float32
+		Header Header  `json:"header"`
+		Value  float32 `json:"value"`
 		Error  *string `json:"error,omitempty"`
 	}
 
@@ -174,18 +173,18 @@ func TestSendRequest(t *testing.T) {
 
 func TestMultipleResponses(t *testing.T) {
 	type Header struct {
-		Type      string
-		RequestID string
+		Type      string `json:"type"`
+		RequestID string `json:"requestId"`
 	}
 
 	type Request struct {
-		Header Header
-		Value  int
+		Header Header `json:"header"`
+		Value  int    `json:"value"`
 	}
 
 	type Response struct {
-		Header Header
-		Value  float32
+		Header Header  `json:"header"`
+		Value  float32 `json:"value"`
 		Error  *string `json:"error,omitempty"`
 	}
 
@@ -253,15 +252,15 @@ func TestMultipleResponses(t *testing.T) {
 
 func TestWrongIDRequest(t *testing.T) {
 	type Request struct {
-		Type      string
-		RequestID string
-		Value     int
+		Type      string `json:"type"`
+		RequestID string `json:"requestId"`
+		Value     int    `json:"value"`
 	}
 
 	type Response struct {
-		Type      string
-		RequestID string
-		Value     float32
+		Type      string  `json:"type"`
+		RequestID string  `json:"requestId"`
+		Value     float32 `json:"value"`
 		Error     *string `json:"error,omitempty"`
 	}
 
@@ -348,8 +347,8 @@ func TestMessageHandler(t *testing.T) {
 	defer server.Close()
 
 	type Message struct {
-		Type  string
-		Value int
+		Type  string `json:"type"`
+		Value int    `json:"value"`
 	}
 
 	messageChannel := make(chan Message)
@@ -401,8 +400,8 @@ func TestMessageHandler(t *testing.T) {
 
 func TestSendMessage(t *testing.T) {
 	type Message struct {
-		Type  string
-		Value int
+		Type  string `json:"type"`
+		Value int    `json:"value"`
 	}
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
@@ -615,7 +614,7 @@ func (handler *testHandler) ClientDisconnected(client *wsserver.Client) {
 }
 
 func savePEMFile(data []byte) (string, error) {
-	file, err := ioutil.TempFile(tmpDir, "*."+cryptutils.PEMExt)
+	file, err := os.CreateTemp(tmpDir, "*."+cryptutils.PEMExt)
 	if err != nil {
 		return "", aoserrors.Wrap(err)
 	}
