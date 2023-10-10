@@ -370,7 +370,7 @@ func TestCopyImageToDevice(t *testing.T) {
 		t.Fatalf("Can't remove destination file: %v", err)
 	}
 
-	if _, err := image.CopyToDevice(dstFile, srcFile); err == nil {
+	if _, err := image.CopyToDevice(dstFile, srcFile, false); err == nil {
 		t.Error("Error expected as device doesn't exist")
 	}
 
@@ -381,7 +381,7 @@ func TestCopyImageToDevice(t *testing.T) {
 
 	file.Close()
 
-	copied, err := image.CopyToDevice(dstFile, srcFile)
+	copied, err := image.CopyToDevice(dstFile, srcFile, false)
 	if err != nil {
 		t.Fatalf("Can't copy image: %v", err)
 	}
@@ -413,7 +413,7 @@ func TestCopyImageFromGzipArchiveToDevice(t *testing.T) {
 		t.Fatalf("Can't remove destination file: %v", err)
 	}
 
-	if _, err := image.CopyFromGzipArchiveToDevice(dstFile, srcFile); err == nil {
+	if _, err := image.CopyFromGzipArchiveToDevice(dstFile, srcFile, false); err == nil {
 		t.Error("Error expected as device doesn't exist")
 	}
 
@@ -424,7 +424,7 @@ func TestCopyImageFromGzipArchiveToDevice(t *testing.T) {
 
 	file.Close()
 
-	copied, err := image.CopyFromGzipArchiveToDevice(dstFile, archiveFile)
+	copied, err := image.CopyFromGzipArchiveToDevice(dstFile, archiveFile, false)
 	if err != nil {
 		t.Fatalf("Can't copy image: %v", err)
 	}
