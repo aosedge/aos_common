@@ -86,6 +86,10 @@ type testProcessData struct {
 	quotaData testQuotaData
 }
 
+type testHostSystemUsage struct {
+	instances map[string]struct{ cpu, ram uint64 }
+}
+
 /***********************************************************************************************************************
  * Variable
  **********************************************************************************************************************/
@@ -165,7 +169,7 @@ func TestSystemAlerts(t *testing.T) {
 
 	var trafficMonitoring testTrafficMonitoring
 
-	systemCPUPersent = getSystemCPUPersent
+	systemCPUPercent = getSystemCPUPercent
 	systemVirtualMemory = getSystemRAM
 	systemDiskUsage = getSystemDisk
 
@@ -412,6 +416,13 @@ func TestInstances(t *testing.T) {
 		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
 	}
 
+	testHostSystemUsageInstance := newTestHostSystemUsage()
+
+	hostSystemUsageInstance = testHostSystemUsageInstance
+	defer func() {
+		hostSystemUsageInstance = &hostSystemUsage{}
+	}()
+
 	monitor, err := New("node1", Config{
 		SendPeriod: aostypes.Duration{Duration: duration},
 		PollPeriod: aostypes.Duration{Duration: duration},
@@ -424,11 +435,6 @@ func TestInstances(t *testing.T) {
 	defer monitor.Close()
 
 	getUserFSQuotaUsage = testUserFSQuotaUsage
-	getProcesses = getTestProcessesList
-
-	defer func() {
-		getProcesses = getProcessesList
-	}()
 
 	testData := []testAlertData{
 		{
@@ -740,6 +746,12 @@ func TestInstances(t *testing.T) {
 		},
 	}
 
+	for i, instance := range monitoringInstances {
+		instanceID := fmt.Sprintf("instance%d", i)
+
+		testHostSystemUsageInstance.instances[instanceID] = struct{ cpu, ram uint64 }{instance.CPU, instance.RAM}
+	}
+
 	for i, item := range testData {
 		processesData = append(processesData, &testProcessData{
 			uid:       int32(item.monitoringConfig.UID),
@@ -747,6 +759,7 @@ func TestInstances(t *testing.T) {
 		})
 
 		instanceID := fmt.Sprintf("instance%d", i)
+
 		if err := monitor.StartInstanceMonitor(instanceID, item.monitoringConfig); err != nil {
 			t.Fatalf("Can't start monitoring instance: %s", err)
 		}
@@ -773,7 +786,7 @@ func TestInstances(t *testing.T) {
 				}
 			}
 
-			t.Error("Unexpected monitoring data")
+			t.Errorf("Unexpected monitoring data: %v", receivedMonitoring)
 		}
 
 	case <-time.After(duration * 2):
@@ -796,7 +809,11 @@ func TestInstances(t *testing.T) {
 			t.Error("Incorrect system alert payload")
 		}
 
-		if err := monitor.StopInstanceMonitor(fmt.Sprintf("instance%d", i)); err != nil {
+		instanceID := fmt.Sprintf("instance%d", i)
+
+		delete(testHostSystemUsageInstance.instances, instanceID)
+
+		if err := monitor.StopInstanceMonitor(instanceID); err != nil {
 			t.Fatalf("Can't stop monitoring instance: %s", err)
 		}
 	}
@@ -845,7 +862,7 @@ func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID st
 	return trafficMonitoringData.inputTraffic, trafficMonitoringData.outputTraffic, nil
 }
 
-func getSystemCPUPersent(interval time.Duration, percpu bool) (persent []float64, err error) {
+func getSystemCPUPercent(interval time.Duration, percpu bool) (persent []float64, err error) {
 	return []float64{systemQuotaData.cpu}, nil
 }
 
@@ -885,12 +902,21 @@ func testUserFSQuotaUsage(path string, uid, gid uint32) (byteUsed uint64, err er
 	return 0, aoserrors.New("incorrect uid")
 }
 
-func getTestProcessesList() (processes []processInterface, err error) {
-	processesInterface := make([]processInterface, len(processesData))
+func newTestHostSystemUsage() *testHostSystemUsage {
+	return &testHostSystemUsage{instances: map[string]struct{ cpu, ram uint64 }{}}
+}
 
-	for i, process := range processesData {
-		processesInterface[i] = process
+func (host *testHostSystemUsage) CacheSystemInfos() {
+}
+
+func (host *testHostSystemUsage) FillSystemInfo(instanceID string, instance *instanceMonitoring) error {
+	data, ok := host.instances[instanceID]
+	if !ok {
+		return aoserrors.Errorf("instance %s not found", instanceID)
 	}
 
-	return processesInterface, nil
+	instance.monitoringData.CPU = data.cpu
+	instance.monitoringData.RAM = data.ram
+
+	return nil
 }
