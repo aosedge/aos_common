@@ -27,13 +27,16 @@ import (
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
+	"errors"
 	"fmt"
 	"log"
 	"net/url"
 	"os"
 	"os/exec"
 	"path"
+	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/aoscloud/aos_common/aoserrors"
@@ -448,6 +451,84 @@ func TestGetTLSConfig(t *testing.T) {
 
 	if _, err = cryptoContext.GetServerTLSConfig(certURL.String(), keyURL.String()); err != nil {
 		t.Errorf("Can't get server TLS config: %s", err)
+	}
+}
+
+func TestParsePKCS11URL(t *testing.T) {
+	cryptutils.DefaultPKCS11Library = "defaultpkcs11.so"
+	defer func() {
+		cryptutils.DefaultPKCS11Library = ""
+	}()
+
+	tmpPKCS11Module := filepath.Join(tmpDir, "libtestpkcs11.so")
+
+	file, err := os.Create(tmpPKCS11Module)
+	if err != nil {
+		t.Fatalf("Can't create tmp PKCS11 module: %v", err)
+	}
+	defer file.Close()
+
+	type urlTest struct {
+		url                     string
+		library, token, userPIN string
+		label, id               []byte
+		err                     error
+	}
+
+	//nolint:goerr113
+	testData := []urlTest{
+		// Malformed PKCS11 URI
+		{
+			url: "wrong URL",
+			err: errors.New("Malformed pkcs11 URI: missing pcks11: prefix"),
+		},
+		// Default values
+		{
+			url:     "pkcs11:",
+			library: cryptutils.DefaultPKCS11Library,
+		},
+		// All fields
+		{
+			url: "pkcs11:token=testToken;object=testLabel;id=%00%01%02%03?module-path=" + tmpPKCS11Module +
+				"&pin-value=testPIN",
+			library: tmpPKCS11Module,
+			token:   "testToken",
+			userPIN: "testPIN",
+			label:   []byte("testLabel"),
+			id:      []byte{0x00, 0x01, 0x02, 0x03},
+		},
+	}
+
+	for _, item := range testData {
+		library, token, userPIN, label, id, err := cryptutils.ParsePKCS11URL(item.url)
+
+		if library != item.library {
+			t.Errorf("Wrong library value: %s", library)
+		}
+
+		if token != item.token {
+			t.Errorf("Wrong token value: %s", token)
+		}
+
+		if userPIN != item.userPIN {
+			t.Errorf("Wrong user PIN value: %s", userPIN)
+		}
+
+		if !bytes.Equal(label, item.label) {
+			t.Errorf("Wrong label value: %v", label)
+		}
+
+		if !bytes.Equal(id, item.id) {
+			t.Errorf("Wrong ID value: %v", id)
+		}
+
+		if (err != nil && item.err == nil) || (err == nil && item.err != nil) {
+			t.Errorf("Wrong err value: %v", err)
+		}
+
+		if err != nil && item.err != nil && !strings.Contains(err.Error(), item.err.Error()) {
+			t.Errorf("Wrong err value: %v", err)
+		}
 	}
 }
 

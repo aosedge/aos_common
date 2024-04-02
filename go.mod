@@ -22,6 +22,7 @@ require (
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.3
+	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
 	golang.org/x/crypto v0.16.0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
