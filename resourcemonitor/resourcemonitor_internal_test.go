@@ -22,6 +22,7 @@ import (
 	"math"
 	"os"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -98,6 +99,7 @@ var (
 	systemQuotaData               testQuotaData
 	instanceTrafficMonitoringData map[string]testTrafficMonitoring
 	processesData                 []*testProcessData
+	numCPU                        = runtime.NumCPU()
 )
 
 /***********************************************************************************************************************
@@ -316,7 +318,6 @@ func TestGetSystemInfo(t *testing.T) {
 
 	systemVirtualMemory = getSystemRAM
 	systemDiskUsage = getSystemDisk
-	cpuCounts = getCPUCounts
 
 	testData := []struct {
 		config             Config
@@ -382,8 +383,13 @@ func TestGetSystemInfo(t *testing.T) {
 	sender := &testAlertsSender{}
 	monitoringSender := &testMonitoringSender{}
 
+	defer func() {
+		cpuCount = runtime.NumCPU()
+	}()
+
 	for _, item := range testData {
 		systemQuotaData = item.quotaData
+		cpuCount = systemQuotaData.cores
 
 		monitor, err := New("node1", item.config, sender, monitoringSender, &testTrafficMonitoring{})
 		if err != nil {
@@ -420,7 +426,7 @@ func TestInstances(t *testing.T) {
 
 	hostSystemUsageInstance = testHostSystemUsageInstance
 	defer func() {
-		hostSystemUsageInstance = &hostSystemUsage{}
+		hostSystemUsageInstance = nil
 	}()
 
 	monitor, err := New("node1", Config{
@@ -872,10 +878,6 @@ func getSystemRAM() (virtualMemory *mem.VirtualMemoryStat, err error) {
 
 func getSystemDisk(path string) (diskUsage *disk.UsageStat, err error) {
 	return &disk.UsageStat{Used: systemQuotaData.disk, Total: systemQuotaData.totalDisk}, nil
-}
-
-func getCPUCounts(logical bool) (int, error) {
-	return systemQuotaData.cores, nil
 }
 
 func (p *testProcessData) Uids() ([]int32, error) {
