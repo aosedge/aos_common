@@ -97,6 +97,7 @@ const (
 const (
 	InstanceStateActivating = "activating"
 	InstanceStateActive     = "active"
+	InstanceStateInactive   = "inactive"
 	InstanceStateFailed     = "failed"
 )
 
