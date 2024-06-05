@@ -4,7 +4,7 @@
 
 OUT_DIR="api"
 
-IAM_SOURCES="iamanager/v4/iamanager.proto"
+IAM_SOURCES="iamanager/v5/iamanager.proto"
 
 SM_SOURCES="servicemanager/v3/servicemanager.proto"
 
