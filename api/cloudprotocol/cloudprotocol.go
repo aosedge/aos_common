@@ -17,10 +17,6 @@
 
 package cloudprotocol
 
-import (
-	"time"
-)
-
 /***********************************************************************************************************************
  * Consts
  **********************************************************************************************************************/
@@ -31,12 +27,6 @@ const ProtocolVersion = 5
 // Cloud message types.
 const (
 	ServiceDiscoveryType = "serviceDiscovery"
-	OverrideEnvVarsType  = "overrideEnvVars"
-)
-
-// Device message types.
-const (
-	OverrideEnvVarsStatusType = "overrideEnvVarsStatus"
 )
 
 /***********************************************************************************************************************
@@ -123,39 +113,4 @@ type ErrorInfo struct {
 	AosCode  int    `json:"aosCode"`
 	ExitCode int    `json:"exitCode"`
 	Message  string `json:"message,omitempty"`
-}
-
-// OverrideEnvVars request to override service environment variables.
-type OverrideEnvVars struct {
-	OverrideEnvVars []EnvVarsInstanceInfo `json:"overrideEnvVars"`
-}
-
-// EnvVarsInstanceInfo struct with envs and related service and user.
-type EnvVarsInstanceInfo struct {
-	InstanceFilter
-	EnvVars []EnvVarInfo `json:"envVars"`
-}
-
-// EnvVarInfo env info with id and time to live.
-type EnvVarInfo struct {
-	ID       string     `json:"id"`
-	Variable string     `json:"variable"`
-	TTL      *time.Time `json:"ttl"`
-}
-
-// OverrideEnvVarsStatus override env status.
-type OverrideEnvVarsStatus struct {
-	OverrideEnvVarsStatus []EnvVarsInstanceStatus `json:"overrideEnvVarsStatus"`
-}
-
-// EnvVarsInstanceStatus struct with envs status and related service and user.
-type EnvVarsInstanceStatus struct {
-	InstanceFilter
-	Statuses []EnvVarStatus `json:"statuses"`
-}
-
-// EnvVarStatus env status with error message.
-type EnvVarStatus struct {
-	ID    string `json:"id"`
-	Error string `json:"error,omitempty"`
 }
