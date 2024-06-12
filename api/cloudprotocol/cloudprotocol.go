@@ -36,8 +36,6 @@ const UnitSecretVersion = 2
 // Cloud message types.
 const (
 	ServiceDiscoveryType       = "serviceDiscovery"
-	StateAcceptanceType        = "stateAcceptance"
-	UpdateStateType            = "updateState"
 	DeviceErrors               = "deviceErrors"
 	RenewCertsNotificationType = "renewCertificatesNotification"
 	IssuedUnitCertsType        = "issuedUnitCertificates"
@@ -47,8 +45,6 @@ const (
 // Device message types.
 const (
 	AlertsType                       = "alerts"
-	NewStateType                     = "newState"
-	StateRequestType                 = "stateRequest"
 	IssueUnitCertsType               = "issueUnitCertificates"
 	InstallUnitCertsConfirmationType = "installUnitCertificatesConfirmation"
 	OverrideEnvVarsStatusType        = "overrideEnvVarsStatus"
@@ -150,34 +146,6 @@ type QueueInfo struct {
 	DeleteWhenUnused bool   `json:"deleteWhenUnused"`
 	Exclusive        bool   `json:"exclusive"`
 	NoWait           bool   `json:"noWait"`
-}
-
-// StateAcceptance state acceptance message.
-type StateAcceptance struct {
-	aostypes.InstanceIdent
-	Checksum string `json:"checksum"`
-	Result   string `json:"result"`
-	Reason   string `json:"reason"`
-}
-
-// UpdateState state update message.
-type UpdateState struct {
-	aostypes.InstanceIdent
-	Checksum string `json:"stateChecksum"`
-	State    string `json:"state"`
-}
-
-// NewState new state structure.
-type NewState struct {
-	aostypes.InstanceIdent
-	Checksum string `json:"stateChecksum"`
-	State    string `json:"state"`
-}
-
-// StateRequest state request structure.
-type StateRequest struct {
-	aostypes.InstanceIdent
-	Default bool `json:"default"`
 }
 
 // SystemAlert system alert structure.
