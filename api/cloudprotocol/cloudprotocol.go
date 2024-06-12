@@ -28,22 +28,15 @@ import (
 // ProtocolVersion specifies supported protocol version.
 const ProtocolVersion = 5
 
-// UnitSecretVersion specifies supported version of UnitSecret message.
-const UnitSecretVersion = 2
-
 // Cloud message types.
 const (
-	ServiceDiscoveryType       = "serviceDiscovery"
-	RenewCertsNotificationType = "renewCertificatesNotification"
-	IssuedUnitCertsType        = "issuedUnitCertificates"
-	OverrideEnvVarsType        = "overrideEnvVars"
+	ServiceDiscoveryType = "serviceDiscovery"
+	OverrideEnvVarsType  = "overrideEnvVars"
 )
 
 // Device message types.
 const (
-	IssueUnitCertsType               = "issueUnitCertificates"
-	InstallUnitCertsConfirmationType = "installUnitCertificatesConfirmation"
-	OverrideEnvVarsStatusType        = "overrideEnvVarsStatus"
+	OverrideEnvVarsStatusType = "overrideEnvVarsStatus"
 )
 
 /***********************************************************************************************************************
@@ -132,58 +125,6 @@ type ErrorInfo struct {
 	Message  string `json:"message,omitempty"`
 }
 
-// RenewCertData renew certificate data.
-type RenewCertData struct {
-	Type      string    `json:"type"`
-	NodeID    string    `json:"nodeId,omitempty"`
-	Serial    string    `json:"serial"`
-	ValidTill time.Time `json:"validTill"`
-}
-
-// RenewCertsNotification renew certificate notification from cloud with pwd.
-type RenewCertsNotification struct {
-	Certificates []RenewCertData `json:"certificates"`
-	UnitSecret   UnitSecret      `json:"unitSecret"`
-}
-
-// IssueCertData issue certificate data.
-type IssueCertData struct {
-	Type   string `json:"type"`
-	NodeID string `json:"nodeId,omitempty"`
-	Csr    string `json:"csr"`
-}
-
-// IssueUnitCerts issue unit certificates request.
-type IssueUnitCerts struct {
-	Requests []IssueCertData `json:"requests"`
-}
-
-// IssuedCertData issued unit certificate data.
-type IssuedCertData struct {
-	Type             string `json:"type"`
-	NodeID           string `json:"nodeId,omitempty"`
-	CertificateChain string `json:"certificateChain"`
-}
-
-// IssuedUnitCerts issued unit certificates info.
-type IssuedUnitCerts struct {
-	Certificates []IssuedCertData `json:"certificates"`
-}
-
-// InstallCertData install certificate data.
-type InstallCertData struct {
-	Type        string `json:"type"`
-	NodeID      string `json:"nodeId,omitempty"`
-	Serial      string `json:"serial"`
-	Status      string `json:"status"`
-	Description string `json:"description,omitempty"`
-}
-
-// InstallUnitCertsConfirmation install unit certificates confirmation.
-type InstallUnitCertsConfirmation struct {
-	Certificates []InstallCertData `json:"certificates"`
-}
-
 // OverrideEnvVars request to override service environment variables.
 type OverrideEnvVars struct {
 	OverrideEnvVars []EnvVarsInstanceInfo `json:"overrideEnvVars"`
@@ -217,12 +158,4 @@ type EnvVarsInstanceStatus struct {
 type EnvVarStatus struct {
 	ID    string `json:"id"`
 	Error string `json:"error,omitempty"`
-}
-
-// UnitSecret keeps unit secret used to decode secure device password.
-type UnitSecret struct {
-	Version int `json:"version"`
-	Data    struct {
-		OwnerPassword string `json:"ownerPassword"`
-	} `json:"data"`
 }
