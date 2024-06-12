@@ -51,7 +51,6 @@ const (
 	NewStateType                     = "newState"
 	PushLogType                      = "pushLog"
 	StateRequestType                 = "stateRequest"
-	UnitStatusType                   = "unitStatus"
 	IssueUnitCertsType               = "issueUnitCertificates"
 	InstallUnitCertsConfirmationType = "installUnitCertificatesConfirmation"
 	OverrideEnvVarsStatusType        = "overrideEnvVarsStatus"
@@ -69,48 +68,11 @@ const (
 	AlertTagServiceInstance  = "serviceInstanceAlert"
 )
 
-// Unit statuses.
-const (
-	UnknownStatus     = "unknown"
-	PendingStatus     = "pending"
-	DownloadingStatus = "downloading"
-	DownloadedStatus  = "downloaded"
-	InstallingStatus  = "installing"
-	InstalledStatus   = "installed"
-	RemovingStatus    = "removing"
-	RemovedStatus     = "removed"
-	ErrorStatus       = "error"
-)
-
-// Service instance states.
-const (
-	InstanceStateActivating = "activating"
-	InstanceStateActive     = "active"
-	InstanceStateInactive   = "inactive"
-	InstanceStateFailed     = "failed"
-)
-
 // Download target types.
 const (
 	DownloadTargetComponent = "component"
 	DownloadTargetLayer     = "layer"
 	DownloadTargetService   = "service"
-)
-
-// Partition types.
-const (
-	GenericPartition  = "generic"
-	StoragesPartition = "storages"
-	StatesPartition   = "states"
-	ServicesPartition = "services"
-	LayersPartition   = "layers"
-)
-
-// Log types.
-const (
-	SystemLog  = "systemLog"
-	ServiceLog = "serviceLog"
-	CrashLog   = "crashLog"
 )
 
 /***********************************************************************************************************************
@@ -329,86 +291,11 @@ type PushLog struct {
 	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
-// UnitStatus unit status structure.
-type UnitStatus struct {
-	UnitConfig   []UnitConfigStatus `json:"unitConfig"`
-	Services     []ServiceStatus    `json:"services"`
-	Layers       []LayerStatus      `json:"layers,omitempty"`
-	Components   []ComponentStatus  `json:"components"`
-	Instances    []InstanceStatus   `json:"instances"`
-	UnitSubjects []string           `json:"unitSubjects"`
-	Nodes        []NodeInfo         `json:"nodes"`
-}
-
-// PartitionInfo partition information.
-type PartitionInfo struct {
-	Name      string   `json:"name"`
-	Types     []string `json:"types"`
-	TotalSize uint64   `json:"totalSize"`
-}
-
-// SystemInfo system information.
-type SystemInfo struct {
-	NumCPUs    uint64          `json:"numCpus"`
-	TotalRAM   uint64          `json:"totalRam"`
-	Partitions []PartitionInfo `json:"partitions"`
-}
-
-// NodeInfo node information.
-type NodeInfo struct {
-	NodeID   string `json:"nodeId"`
-	NodeType string `json:"nodeType"`
-	SystemInfo
-}
-
 // ErrorInfo error information.
 type ErrorInfo struct {
 	AosCode  int    `json:"aosCode"`
 	ExitCode int    `json:"exitCode"`
 	Message  string `json:"message,omitempty"`
-}
-
-// InstanceStatus service instance runtime status.
-type InstanceStatus struct {
-	aostypes.InstanceIdent
-	AosVersion    uint64     `json:"aosVersion"`
-	StateChecksum string     `json:"stateChecksum,omitempty"`
-	RunState      string     `json:"runState"`
-	NodeID        string     `json:"nodeId"`
-	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
-}
-
-// UnitConfigStatus unit config status.
-type UnitConfigStatus struct {
-	VendorVersion string     `json:"vendorVersion"`
-	Status        string     `json:"status"`
-	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
-}
-
-// ServiceStatus service status.
-type ServiceStatus struct {
-	ID         string     `json:"id"`
-	AosVersion uint64     `json:"aosVersion"`
-	Status     string     `json:"status"`
-	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
-}
-
-// LayerStatus layer status.
-type LayerStatus struct {
-	ID         string     `json:"id"`
-	AosVersion uint64     `json:"aosVersion"`
-	Digest     string     `json:"digest"`
-	Status     string     `json:"status"`
-	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
-}
-
-// ComponentStatus component status.
-type ComponentStatus struct {
-	ID            string     `json:"id"`
-	AosVersion    uint64     `json:"aosVersion"`
-	VendorVersion string     `json:"vendorVersion"`
-	Status        string     `json:"status"`
-	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // RenewCertData renew certificate data.
