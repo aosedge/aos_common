@@ -36,7 +36,6 @@ const UnitSecretVersion = 2
 // Cloud message types.
 const (
 	ServiceDiscoveryType       = "serviceDiscovery"
-	DeviceErrors               = "deviceErrors"
 	RenewCertsNotificationType = "renewCertificatesNotification"
 	IssuedUnitCertsType        = "issuedUnitCertificates"
 	OverrideEnvVarsType        = "overrideEnvVars"
