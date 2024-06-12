@@ -35,7 +35,6 @@ const UnitSecretVersion = 2
 
 // Cloud message types.
 const (
-	RequestLogType             = "requestLog"
 	ServiceDiscoveryType       = "serviceDiscovery"
 	StateAcceptanceType        = "stateAcceptance"
 	UpdateStateType            = "updateState"
@@ -49,7 +48,6 @@ const (
 const (
 	AlertsType                       = "alerts"
 	NewStateType                     = "newState"
-	PushLogType                      = "pushLog"
 	StateRequestType                 = "stateRequest"
 	IssueUnitCertsType               = "issueUnitCertificates"
 	InstallUnitCertsConfirmationType = "installUnitCertificatesConfirmation"
@@ -152,28 +150,6 @@ type QueueInfo struct {
 	DeleteWhenUnused bool   `json:"deleteWhenUnused"`
 	Exclusive        bool   `json:"exclusive"`
 	NoWait           bool   `json:"noWait"`
-}
-
-// InstanceFilter instance filter structure.
-type InstanceFilter struct {
-	ServiceID *string `json:"serviceId,omitempty"`
-	SubjectID *string `json:"subjectId,omitempty"`
-	Instance  *uint64 `json:"instance,omitempty"`
-}
-
-// LogFilter request log message.
-type LogFilter struct {
-	From    *time.Time `json:"from"`
-	Till    *time.Time `json:"till"`
-	NodeIDs []string   `json:"nodeIds,omitempty"`
-	InstanceFilter
-}
-
-// RequestLog request log message.
-type RequestLog struct {
-	LogID   string    `json:"logId"`
-	LogType string    `json:"logType"`
-	Filter  LogFilter `json:"filter"`
 }
 
 // StateAcceptance state acceptance message.
@@ -281,16 +257,6 @@ type AlertItem struct {
 // Alerts alerts message structure.
 type Alerts []AlertItem
 
-// PushLog push service log structure.
-type PushLog struct {
-	NodeID     string     `json:"nodeId"`
-	LogID      string     `json:"logId"`
-	PartsCount uint64     `json:"partsCount,omitempty"`
-	Part       uint64     `json:"part,omitempty"`
-	Content    []byte     `json:"content,omitempty"`
-	ErrorInfo  *ErrorInfo `json:"errorInfo,omitempty"`
-}
-
 // ErrorInfo error information.
 type ErrorInfo struct {
 	AosCode  int    `json:"aosCode"`
@@ -391,26 +357,4 @@ type UnitSecret struct {
 	Data    struct {
 		OwnerPassword string `json:"ownerPassword"`
 	} `json:"data"`
-}
-
-/***********************************************************************************************************************
- * Public
- **********************************************************************************************************************/
-
-func NewInstanceFilter(serviceID, subjectID string, instance int64) (filter InstanceFilter) {
-	if serviceID != "" {
-		filter.ServiceID = &serviceID
-	}
-
-	if subjectID != "" {
-		filter.SubjectID = &subjectID
-	}
-
-	if instance != -1 {
-		localInstance := (uint64)(instance)
-
-		filter.Instance = &localInstance
-	}
-
-	return filter
 }
