@@ -18,8 +18,6 @@
 package cloudprotocol
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/aoscloud/aos_common/aostypes"
@@ -37,7 +35,6 @@ const UnitSecretVersion = 2
 
 // Cloud message types.
 const (
-	DesiredStatusType          = "desiredStatus"
 	RequestLogType             = "requestLog"
 	ServiceDiscoveryType       = "serviceDiscovery"
 	StateAcceptanceType        = "stateAcceptance"
@@ -83,13 +80,6 @@ const (
 	RemovingStatus    = "removing"
 	RemovedStatus     = "removed"
 	ErrorStatus       = "error"
-)
-
-// SOTA/FOTA schedule type.
-const (
-	ForceUpdate     = "force"
-	TriggerUpdate   = "trigger"
-	TimetableUpdate = "timetable"
 )
 
 // Service instance states.
@@ -222,49 +212,6 @@ type RequestLog struct {
 	LogID   string    `json:"logId"`
 	LogType string    `json:"logType"`
 	Filter  LogFilter `json:"filter"`
-}
-
-// DecryptionInfo update decryption info.
-type DecryptionInfo struct {
-	BlockAlg     string `json:"blockAlg"`
-	BlockIv      []byte `json:"blockIv"`
-	BlockKey     []byte `json:"blockKey"`
-	AsymAlg      string `json:"asymAlg"`
-	ReceiverInfo *struct {
-		Serial string `json:"serial"`
-		Issuer []byte `json:"issuer"`
-	} `json:"receiverInfo"`
-}
-
-// Signs message signature.
-type Signs struct {
-	ChainName        string   `json:"chainName"`
-	Alg              string   `json:"alg"`
-	Value            []byte   `json:"value"`
-	TrustedTimestamp string   `json:"trustedTimestamp"`
-	OcspValues       []string `json:"ocspValues"`
-}
-
-// CertificateChain  certificate chain.
-type CertificateChain struct {
-	Name         string   `json:"name"`
-	Fingerprints []string `json:"fingerprints"`
-}
-
-// Certificate certificate structure.
-type Certificate struct {
-	Fingerprint string `json:"fingerprint"`
-	Certificate []byte `json:"certificate"`
-}
-
-// DecryptDataStruct struct contains how to decrypt data.
-type DecryptDataStruct struct {
-	URLs           []string        `json:"urls"`
-	Sha256         []byte          `json:"sha256"`
-	Sha512         []byte          `json:"sha512"`
-	Size           uint64          `json:"size"`
-	DecryptionInfo *DecryptionInfo `json:"decryptionInfo,omitempty"`
-	Signs          *Signs          `json:"signs,omitempty"`
 }
 
 // StateAcceptance state acceptance message.
@@ -464,71 +411,6 @@ type ComponentStatus struct {
 	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
-// ServiceInfo decrypted service info.
-type ServiceInfo struct {
-	aostypes.VersionInfo
-	ID         string `json:"id"`
-	ProviderID string `json:"providerId"`
-	DecryptDataStruct
-}
-
-// LayerInfo decrypted layer info.
-type LayerInfo struct {
-	aostypes.VersionInfo
-	ID     string `json:"id"`
-	Digest string `json:"digest"`
-	DecryptDataStruct
-}
-
-// ComponentInfo decrypted component info.
-type ComponentInfo struct {
-	aostypes.VersionInfo
-	ID          string          `json:"id"`
-	Annotations json.RawMessage `json:"annotations,omitempty"`
-	DecryptDataStruct
-}
-
-// InstanceInfo decrypted desired instance runtime info.
-type InstanceInfo struct {
-	ServiceID    string   `json:"serviceId"`
-	SubjectID    string   `json:"subjectId"`
-	Priority     uint64   `json:"priority"`
-	NumInstances uint64   `json:"numInstances"`
-	Labels       []string `json:"labels"`
-}
-
-// TimeSlot time slot with start and finish time.
-type TimeSlot struct {
-	Start  aostypes.Time `json:"start"`
-	Finish aostypes.Time `json:"finish"`
-}
-
-// TimetableEntry entry for update timetable.
-type TimetableEntry struct {
-	DayOfWeek uint       `json:"dayOfWeek"`
-	TimeSlots []TimeSlot `json:"timeSlots"`
-}
-
-// ScheduleRule rule for performing schedule update.
-type ScheduleRule struct {
-	TTL       uint64           `json:"ttl"`
-	Type      string           `json:"type"`
-	Timetable []TimetableEntry `json:"timetable"`
-}
-
-// DesiredStatus desired status.
-type DesiredStatus struct {
-	UnitConfig        json.RawMessage    `json:"unitConfig"`
-	Components        []ComponentInfo    `json:"components"`
-	Layers            []LayerInfo        `json:"layers"`
-	Services          []ServiceInfo      `json:"services"`
-	Instances         []InstanceInfo     `json:"instances"`
-	FOTASchedule      ScheduleRule       `json:"fotaSchedule"`
-	SOTASchedule      ScheduleRule       `json:"sotaSchedule"`
-	CertificateChains []CertificateChain `json:"certificateChains,omitempty"`
-	Certificates      []Certificate      `json:"certificates,omitempty"`
-}
-
 // RenewCertData renew certificate data.
 type RenewCertData struct {
 	Type      string    `json:"type"`
@@ -627,21 +509,6 @@ type UnitSecret struct {
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
-
-func (service ServiceInfo) String() string {
-	return fmt.Sprintf("{id: %s, vendorVersion: %s aosVersion: %d, description: %s}",
-		service.ID, service.VendorVersion, service.AosVersion, service.Description)
-}
-
-func (layer LayerInfo) String() string {
-	return fmt.Sprintf("{id: %s, digest: %s, vendorVersion: %s aosVersion: %d, description: %s}",
-		layer.ID, layer.Digest, layer.VendorVersion, layer.AosVersion, layer.Description)
-}
-
-func (component ComponentInfo) String() string {
-	return fmt.Sprintf("{id: %s, annotations: %s, vendorVersion: %s aosVersion: %d, description: %s}",
-		component.ID, component.Annotations, component.VendorVersion, component.AosVersion, component.Description)
-}
 
 func NewInstanceFilter(serviceID, subjectID string, instance int64) (filter InstanceFilter) {
 	if serviceID != "" {
