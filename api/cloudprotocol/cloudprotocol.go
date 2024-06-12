@@ -51,7 +51,6 @@ const (
 // Device message types.
 const (
 	AlertsType                       = "alerts"
-	MonitoringDataType               = "monitoringData"
 	NewStateType                     = "newState"
 	PushLogType                      = "pushLog"
 	StateRequestType                 = "stateRequest"
@@ -372,40 +371,6 @@ type AlertItem struct {
 
 // Alerts alerts message structure.
 type Alerts []AlertItem
-
-// Monitoring monitoring message structure.
-type Monitoring struct {
-	Nodes []NodeMonitoringData `json:"nodes"`
-}
-
-// NodeMonitoringData node monitoring data.
-type NodeMonitoringData struct {
-	MonitoringData
-	NodeID           string                   `json:"nodeId"`
-	Timestamp        time.Time                `json:"timestamp"`
-	ServiceInstances []InstanceMonitoringData `json:"serviceInstances"`
-}
-
-// MonitoringData monitoring data.
-type MonitoringData struct {
-	RAM        uint64           `json:"ram"`
-	CPU        uint64           `json:"cpu"`
-	InTraffic  uint64           `json:"inTraffic"`
-	OutTraffic uint64           `json:"outTraffic"`
-	Disk       []PartitionUsage `json:"disk"`
-}
-
-// PartitionUsage partition usage information.
-type PartitionUsage struct {
-	Name     string `json:"name"`
-	UsedSize uint64 `json:"usedSize"`
-}
-
-// InstanceMonitoringData monitoring data for service.
-type InstanceMonitoringData struct {
-	aostypes.InstanceIdent
-	MonitoringData
-}
 
 // PushLog push service log structure.
 type PushLog struct {
