@@ -24,11 +24,6 @@ package cloudprotocol
 // ProtocolVersion specifies supported protocol version.
 const ProtocolVersion = 5
 
-// Cloud message types.
-const (
-	ServiceDiscoveryType = "serviceDiscovery"
-)
-
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
@@ -50,62 +45,6 @@ type MessageHeader struct {
 	Version     uint64 `json:"version"`
 	SystemID    string `json:"systemId"`
 	MessageType string `json:"messageType"`
-}
-
-// ServiceDiscoveryRequest service discovery request.
-type ServiceDiscoveryRequest struct{}
-
-// ServiceDiscoveryResponse service discovery response.
-type ServiceDiscoveryResponse struct {
-	Version    uint64         `json:"version"`
-	Connection ConnectionInfo `json:"connection"`
-}
-
-// ConnectionInfo AMQP connection info.
-type ConnectionInfo struct {
-	SendParams    SendParams    `json:"sendParams"`
-	ReceiveParams ReceiveParams `json:"receiveParams"`
-}
-
-// SendParams AMQP send parameters.
-type SendParams struct {
-	Host      string         `json:"host"`
-	User      string         `json:"user"`
-	Password  string         `json:"password"`
-	Mandatory bool           `json:"mandatory"`
-	Immediate bool           `json:"immediate"`
-	Exchange  ExchangeParams `json:"exchange"`
-}
-
-// ExchangeParams AMQP exchange parameters.
-type ExchangeParams struct {
-	Name       string `json:"name"`
-	Durable    bool   `json:"durable"`
-	AutoDetect bool   `json:"autoDetect"`
-	Internal   bool   `json:"internal"`
-	NoWait     bool   `json:"noWait"`
-}
-
-// ReceiveParams AMQP receive parameters.
-type ReceiveParams struct {
-	Host      string    `json:"host"`
-	User      string    `json:"user"`
-	Password  string    `json:"password"`
-	Consumer  string    `json:"consumer"`
-	AutoAck   bool      `json:"autoAck"`
-	Exclusive bool      `json:"exclusive"`
-	NoLocal   bool      `json:"noLocal"`
-	NoWait    bool      `json:"noWait"`
-	Queue     QueueInfo `json:"queue"`
-}
-
-// QueueInfo AMQP queue info.
-type QueueInfo struct {
-	Name             string `json:"name"`
-	Durable          bool   `json:"durable"`
-	DeleteWhenUnused bool   `json:"deleteWhenUnused"`
-	Exclusive        bool   `json:"exclusive"`
-	NoWait           bool   `json:"noWait"`
 }
 
 // ErrorInfo error information.
