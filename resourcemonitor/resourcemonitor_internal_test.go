@@ -131,9 +131,9 @@ func TestAlertProcessor(t *testing.T) {
 			destination = append(destination, value)
 		},
 		aostypes.AlertRuleParam{
-			MinTimeout:   aostypes.Duration{Duration: 3 * time.Second},
-			MinThreshold: 80,
-			MaxThreshold: 90,
+			Timeout: aostypes.Duration{Duration: 3 * time.Second},
+			Low:     80,
+			High:    90,
 		})
 
 	values := []uint64{50, 91, 79, 92, 93, 94, 95, 94, 79, 91, 92, 93, 94, 32, 91, 92, 93, 94, 95, 96}
@@ -178,34 +178,34 @@ func TestSystemAlerts(t *testing.T) {
 	config := Config{
 		AlertRules: aostypes.AlertRules{
 			CPU: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 30,
-				MaxThreshold: 40,
+				Timeout: aostypes.Duration{},
+				Low:     30,
+				High:    40,
 			},
 			RAM: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 1000,
-				MaxThreshold: 2000,
+				Timeout: aostypes.Duration{},
+				Low:     1000,
+				High:    2000,
 			},
 			UsedDisks: []aostypes.PartitionAlertRuleParam{
 				{
 					AlertRuleParam: aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 2000,
-						MaxThreshold: 4000,
+						Timeout: aostypes.Duration{},
+						Low:     2000,
+						High:    4000,
 					},
 					Name: cloudprotocol.GenericPartition,
 				},
 			},
 			InTraffic: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 100,
-				MaxThreshold: 200,
+				Timeout: aostypes.Duration{},
+				Low:     100,
+				High:    200,
 			},
 			OutTraffic: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 100,
-				MaxThreshold: 200,
+				Timeout: aostypes.Duration{},
+				Low:     100,
+				High:    200,
 			},
 		},
 		SendPeriod: aostypes.Duration{Duration: duration},
@@ -322,7 +322,7 @@ func TestGetSystemInfo(t *testing.T) {
 	testData := []struct {
 		config             Config
 		quotaData          testQuotaData
-		expectedSystemInfo cloudprotocol.SystemInfo
+		expectedSystemInfo SystemInfo
 	}{
 		{
 			config: Config{
@@ -339,7 +339,7 @@ func TestGetSystemInfo(t *testing.T) {
 				totalRAM:  1000,
 				totalDisk: 1000,
 			},
-			expectedSystemInfo: cloudprotocol.SystemInfo{
+			expectedSystemInfo: SystemInfo{
 				NumCPUs:  2,
 				TotalRAM: 1000,
 				Partitions: []cloudprotocol.PartitionInfo{
@@ -366,7 +366,7 @@ func TestGetSystemInfo(t *testing.T) {
 				totalRAM:  2000,
 				totalDisk: 4000,
 			},
-			expectedSystemInfo: cloudprotocol.SystemInfo{
+			expectedSystemInfo: SystemInfo{
 				NumCPUs:  3,
 				TotalRAM: 2000,
 				Partitions: []cloudprotocol.PartitionInfo{
@@ -460,34 +460,34 @@ func TestInstances(t *testing.T) {
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
 					CPU: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						Timeout: aostypes.Duration{},
+						Low:     30,
+						High:    40,
 					},
 					RAM: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						Timeout: aostypes.Duration{},
+						Low:     1000,
+						High:    2000,
 					},
 					UsedDisks: []aostypes.PartitionAlertRuleParam{
 						{
 							AlertRuleParam: aostypes.AlertRuleParam{
-								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								Timeout: aostypes.Duration{},
+								Low:     2000,
+								High:    3000,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
 					InTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 					OutTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
@@ -510,34 +510,34 @@ func TestInstances(t *testing.T) {
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
 					CPU: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						Timeout: aostypes.Duration{},
+						Low:     30,
+						High:    40,
 					},
 					RAM: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						Timeout: aostypes.Duration{},
+						Low:     1000,
+						High:    2000,
 					},
 					UsedDisks: []aostypes.PartitionAlertRuleParam{
 						{
 							AlertRuleParam: aostypes.AlertRuleParam{
-								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								Timeout: aostypes.Duration{},
+								Low:     2000,
+								High:    3000,
 							},
 							Name: cloudprotocol.LayersPartition,
 						},
 					},
 					InTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 					OutTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.LayersPartition, Path: "."}},
@@ -572,34 +572,34 @@ func TestInstances(t *testing.T) {
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
 					CPU: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						Timeout: aostypes.Duration{},
+						Low:     30,
+						High:    40,
 					},
 					RAM: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						Timeout: aostypes.Duration{},
+						Low:     1000,
+						High:    2000,
 					},
 					UsedDisks: []aostypes.PartitionAlertRuleParam{
 						{
 							AlertRuleParam: aostypes.AlertRuleParam{
-								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								Timeout: aostypes.Duration{},
+								Low:     2000,
+								High:    3000,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
 					InTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 					OutTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
@@ -639,34 +639,34 @@ func TestInstances(t *testing.T) {
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
 					CPU: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						Timeout: aostypes.Duration{},
+						Low:     30,
+						High:    40,
 					},
 					RAM: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						Timeout: aostypes.Duration{},
+						Low:     1000,
+						High:    2000,
 					},
 					UsedDisks: []aostypes.PartitionAlertRuleParam{
 						{
 							AlertRuleParam: aostypes.AlertRuleParam{
-								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								Timeout: aostypes.Duration{},
+								Low:     2000,
+								High:    3000,
 							},
 							Name: cloudprotocol.StatesPartition,
 						},
 					},
 					InTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 					OutTraffic: &aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 100,
-						MaxThreshold: 200,
+						Timeout: aostypes.Duration{},
+						Low:     100,
+						High:    200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.StatesPartition, Path: "."}},
