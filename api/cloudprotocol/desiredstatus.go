@@ -82,7 +82,7 @@ type ResourceOvercommits struct {
 
 // NodeConfig node configuration.
 type NodeConfig struct {
-	NodeID              string               `json:"nodeId"`
+	NodeID              *string              `json:"nodeId,omitempty"`
 	NodeType            string               `json:"nodeType"`
 	ResourceOvercommits ResourceOvercommits  `json:"overcommits"`
 	AlertRules          *aostypes.AlertRules `json:"alertRules,omitempty"`
