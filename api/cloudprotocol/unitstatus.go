@@ -90,6 +90,7 @@ type PartitionInfo struct {
 	Name      string   `json:"name"`
 	Types     []string `json:"types"`
 	TotalSize uint64   `json:"totalSize"`
+	Path      string   `json:"-"`
 }
 
 // NodeInfo node information.
