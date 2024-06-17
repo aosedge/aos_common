@@ -62,9 +62,29 @@ type SystemUsageProvider interface {
 	FillSystemInfo(instanceID string, instance *instanceMonitoring) error
 }
 
+// QuotaAlert quota alert structure.
+type QuotaAlert struct {
+	Timestamp time.Time
+	Parameter string
+	Value     uint64
+	Status    string
+}
+
+// SystemQuotaAlert system quota alert structure.
+type SystemQuotaAlert struct {
+	QuotaAlert
+}
+
+// InstanceQuotaAlert instance quota alert structure.
+type InstanceQuotaAlert struct {
+	InstanceIdent aostypes.InstanceIdent
+	QuotaAlert
+}
+
 // AlertSender interface to send resource alerts.
 type AlertSender interface {
-	SendAlert(alert cloudprotocol.AlertItem)
+	SendSystemQuotaAlert(alert SystemQuotaAlert)
+	SendInstanceQuotaAlert(alert InstanceQuotaAlert)
 }
 
 // MonitoringSender sends monitoring data.
@@ -193,8 +213,8 @@ func New(
 		monitor.alertProcessors.PushBack(createAlertProcessor(
 			"System CPU",
 			&monitor.nodeMonitoringData.CPU,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem("cpu", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("cpu", time, value, status))
 			},
 			*monitor.config.CPU))
 	}
@@ -203,8 +223,8 @@ func New(
 		monitor.alertProcessors.PushBack(createAlertProcessor(
 			"System RAM",
 			&monitor.nodeMonitoringData.RAM,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem("ram", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("ram", time, value, status))
 			},
 			*monitor.config.RAM))
 	}
@@ -225,9 +245,9 @@ func New(
 				monitor.alertProcessors.PushBack(createAlertProcessor(
 					"Partition "+monitor.nodeMonitoringData.Disk[i].Name,
 					&monitor.nodeMonitoringData.Disk[i].UsedSize,
-					func(time time.Time, value uint64) {
-						monitor.alertSender.SendAlert(prepareSystemAlertItem(
-							monitor.nodeMonitoringData.Disk[i].Name, time, value))
+					func(time time.Time, value uint64, status string) {
+						monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem(
+							monitor.nodeMonitoringData.Disk[i].Name, time, value, status))
 					},
 					diskRule.AlertRuleParam))
 
@@ -240,8 +260,8 @@ func New(
 		monitor.alertProcessors.PushBack(createAlertProcessor(
 			"IN Traffic",
 			&monitor.nodeMonitoringData.InTraffic,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem("inTraffic", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("inTraffic", time, value, status))
 			},
 			*monitor.config.InTraffic))
 	}
@@ -250,8 +270,8 @@ func New(
 		monitor.alertProcessors.PushBack(createAlertProcessor(
 			"OUT Traffic",
 			&monitor.nodeMonitoringData.OutTraffic,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem("outTraffic", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("outTraffic", time, value, status))
 			},
 			*monitor.config.OutTraffic))
 	}
@@ -393,9 +413,9 @@ func (monitor *ResourceMonitor) createInstanceMonitoring(
 		e := monitor.alertProcessors.PushBack(createAlertProcessor(
 			instanceID+" CPU",
 			&serviceMonitoring.monitoringData.CPU,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(
-					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "cpu", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendInstanceQuotaAlert(
+					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "cpu", time, value, status))
 			}, *rules.CPU))
 
 		serviceMonitoring.alertProcessorElements = append(serviceMonitoring.alertProcessorElements, e)
@@ -405,9 +425,9 @@ func (monitor *ResourceMonitor) createInstanceMonitoring(
 		e := monitor.alertProcessors.PushBack(createAlertProcessor(
 			instanceID+" RAM",
 			&serviceMonitoring.monitoringData.RAM,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(
-					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "ram", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendInstanceQuotaAlert(
+					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "ram", time, value, status))
 			}, *rules.RAM))
 
 		serviceMonitoring.alertProcessorElements = append(serviceMonitoring.alertProcessorElements, e)
@@ -423,11 +443,11 @@ func (monitor *ResourceMonitor) createInstanceMonitoring(
 				e := monitor.alertProcessors.PushBack(createAlertProcessor(
 					instanceID+" Partition "+serviceMonitoring.monitoringData.Disk[i].Name,
 					&serviceMonitoring.monitoringData.Disk[i].UsedSize,
-					func(time time.Time, value uint64) {
-						monitor.alertSender.SendAlert(
+					func(time time.Time, value uint64, status string) {
+						monitor.alertSender.SendInstanceQuotaAlert(
 							prepareInstanceAlertItem(
 								monitoringConfig.InstanceIdent, serviceMonitoring.monitoringData.Disk[i].Name,
-								time, value))
+								time, value, status))
 					}, diskRule.AlertRuleParam))
 
 				serviceMonitoring.alertProcessorElements = append(serviceMonitoring.alertProcessorElements, e)
@@ -441,9 +461,9 @@ func (monitor *ResourceMonitor) createInstanceMonitoring(
 		e := monitor.alertProcessors.PushBack(createAlertProcessor(
 			instanceID+" Traffic IN",
 			&serviceMonitoring.monitoringData.InTraffic,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(
-					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "inTraffic", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendInstanceQuotaAlert(
+					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "inTraffic", time, value, status))
 			}, *rules.InTraffic))
 
 		serviceMonitoring.alertProcessorElements = append(serviceMonitoring.alertProcessorElements, e)
@@ -453,9 +473,9 @@ func (monitor *ResourceMonitor) createInstanceMonitoring(
 		e := monitor.alertProcessors.PushBack(createAlertProcessor(
 			instanceID+" Traffic OUT",
 			&serviceMonitoring.monitoringData.OutTraffic,
-			func(time time.Time, value uint64) {
-				monitor.alertSender.SendAlert(
-					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "outTraffic", time, value))
+			func(time time.Time, value uint64, status string) {
+				monitor.alertSender.SendInstanceQuotaAlert(
+					prepareInstanceAlertItem(monitoringConfig.InstanceIdent, "outTraffic", time, value, status))
 			}, *rules.OutTraffic))
 
 		serviceMonitoring.alertProcessorElements = append(serviceMonitoring.alertProcessorElements, e)
@@ -641,27 +661,27 @@ func getInstanceDiskUsage(path string, uid, gid uint32) (diskUse uint64, err err
 	return diskUse, nil
 }
 
-func prepareSystemAlertItem(parameter string, timestamp time.Time, value uint64) cloudprotocol.AlertItem {
-	return cloudprotocol.AlertItem{
-		Timestamp: timestamp,
-		Tag:       cloudprotocol.AlertTagSystemQuota,
-		Payload: cloudprotocol.SystemQuotaAlert{
+func prepareSystemAlertItem(parameter string, timestamp time.Time, value uint64, status string) SystemQuotaAlert {
+	return SystemQuotaAlert{
+		QuotaAlert: QuotaAlert{
+			Timestamp: timestamp,
 			Parameter: parameter,
 			Value:     value,
+			Status:    status,
 		},
 	}
 }
 
 func prepareInstanceAlertItem(
-	instanceIndent aostypes.InstanceIdent, parameter string, timestamp time.Time, value uint64,
-) cloudprotocol.AlertItem {
-	return cloudprotocol.AlertItem{
-		Timestamp: timestamp,
-		Tag:       cloudprotocol.AlertTagInstanceQuota,
-		Payload: cloudprotocol.InstanceQuotaAlert{
-			InstanceIdent: instanceIndent,
-			Parameter:     parameter,
-			Value:         value,
+	instanceIndent aostypes.InstanceIdent, parameter string, timestamp time.Time, value uint64, status string,
+) InstanceQuotaAlert {
+	return InstanceQuotaAlert{
+		InstanceIdent: instanceIndent,
+		QuotaAlert: QuotaAlert{
+			Timestamp: timestamp,
+			Parameter: parameter,
+			Value:     value,
+			Status:    status,
 		},
 	}
 }
