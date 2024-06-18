@@ -49,7 +49,7 @@ func (xen *xenSystemUsage) FillSystemInfo(instanceID string, instance *instanceM
 	systemInfo, ok := xen.systemInfos[instanceID]
 	if ok {
 		instance.monitoringData.CPU = uint64(systemInfo.CPUFraction)
-		instance.monitoringData.RAM = uint64(systemInfo.Memory) * 1024 //nolint:gomnd
+		instance.monitoringData.RAM = uint64(systemInfo.Memory) * 1024 //nolint:mnd
 	}
 
 	return nil

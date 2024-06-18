@@ -242,7 +242,7 @@ func (t *Time) UnmarshalJSON(b []byte) (err error) {
 			return aoserrors.Errorf(errFormat, value)
 		}
 
-		intFields := make([]int, 3) //nolint:gomnd //time format has 3 fields HH:MM:SS
+		intFields := make([]int, 3) //nolint:mnd //time format has 3 fields HH:MM:SS
 
 		for i, field := range strFields {
 			if intFields[i], err = strconv.Atoi(field); err != nil {

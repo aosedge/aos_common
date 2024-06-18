@@ -485,6 +485,7 @@ func waitAlerts(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Durat
 
 		for i, message := range data {
 			var alertMsg string
+
 			switch alert.Tag {
 			case cloudprotocol.AlertTagAosCore:
 				castedAlert, ok := alert.Payload.(cloudprotocol.CoreAlert)

@@ -125,8 +125,10 @@ func TestSendRequest(t *testing.T) {
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
 		func(client *wsserver.Client, messageType int, data []byte) (response []byte, err error) {
-			var req Request
-			var rsp Response
+			var (
+				req Request
+				rsp Response
+			)
 
 			if err = json.Unmarshal(data, &req); err != nil {
 				return nil, aoserrors.Wrap(err)
@@ -190,8 +192,10 @@ func TestMultipleResponses(t *testing.T) {
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
 		func(client *wsserver.Client, messageType int, data []byte) (response []byte, err error) {
-			var req Request
-			var rsp Response
+			var (
+				req Request
+				rsp Response
+			)
 
 			if err = json.Unmarshal(data, &req); err != nil {
 				return nil, aoserrors.Wrap(err)
@@ -266,8 +270,10 @@ func TestWrongIDRequest(t *testing.T) {
 
 	server, err := wsserver.New("TestServer", hostURL, crtFile, keyFile, newTestHandler(
 		func(client *wsserver.Client, messageType int, data []byte) (response []byte, err error) {
-			var req Request
-			var rsp Response
+			var (
+				req Request
+				rsp Response
+			)
 
 			if err = json.Unmarshal(data, &req); err != nil {
 				return nil, aoserrors.Wrap(err)
