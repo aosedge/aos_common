@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.2.0
 // - protoc             v5.26.0
-// source: communicationmanager/v2/updatescheduler.proto
+// source: communicationmanager/v3/updatescheduler.proto
 
 package communicationmanager
 
@@ -38,7 +38,7 @@ func NewUpdateSchedulerServiceClient(cc grpc.ClientConnInterface) UpdateSchedule
 
 func (c *updateSchedulerServiceClient) StartFOTAUpdate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/communicationmanager.v2.UpdateSchedulerService/StartFOTAUpdate", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/communicationmanager.v3.UpdateSchedulerService/StartFOTAUpdate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -47,7 +47,7 @@ func (c *updateSchedulerServiceClient) StartFOTAUpdate(ctx context.Context, in *
 
 func (c *updateSchedulerServiceClient) StartSOTAUpdate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/communicationmanager.v2.UpdateSchedulerService/StartSOTAUpdate", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/communicationmanager.v3.UpdateSchedulerService/StartSOTAUpdate", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +55,7 @@ func (c *updateSchedulerServiceClient) StartSOTAUpdate(ctx context.Context, in *
 }
 
 func (c *updateSchedulerServiceClient) SubscribeNotifications(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (UpdateSchedulerService_SubscribeNotificationsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &UpdateSchedulerService_ServiceDesc.Streams[0], "/communicationmanager.v2.UpdateSchedulerService/SubscribeNotifications", opts...)
+	stream, err := c.cc.NewStream(ctx, &UpdateSchedulerService_ServiceDesc.Streams[0], "/communicationmanager.v3.UpdateSchedulerService/SubscribeNotifications", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func _UpdateSchedulerService_StartFOTAUpdate_Handler(srv interface{}, ctx contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/communicationmanager.v2.UpdateSchedulerService/StartFOTAUpdate",
+		FullMethod: "/communicationmanager.v3.UpdateSchedulerService/StartFOTAUpdate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateSchedulerServiceServer).StartFOTAUpdate(ctx, req.(*emptypb.Empty))
@@ -151,7 +151,7 @@ func _UpdateSchedulerService_StartSOTAUpdate_Handler(srv interface{}, ctx contex
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/communicationmanager.v2.UpdateSchedulerService/StartSOTAUpdate",
+		FullMethod: "/communicationmanager.v3.UpdateSchedulerService/StartSOTAUpdate",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(UpdateSchedulerServiceServer).StartSOTAUpdate(ctx, req.(*emptypb.Empty))
@@ -184,7 +184,7 @@ func (x *updateSchedulerServiceSubscribeNotificationsServer) Send(m *SchedulerNo
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var UpdateSchedulerService_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "communicationmanager.v2.UpdateSchedulerService",
+	ServiceName: "communicationmanager.v3.UpdateSchedulerService",
 	HandlerType: (*UpdateSchedulerServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
@@ -203,5 +203,5 @@ var UpdateSchedulerService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "communicationmanager/v2/updatescheduler.proto",
+	Metadata: "communicationmanager/v3/updatescheduler.proto",
 }

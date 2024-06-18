@@ -11,11 +11,11 @@ COMMON_SOURCES="common/v1/common.proto"
 
 IAM_SOURCES="iamanager/v5/iamanager.proto"
 
-SM_SOURCES="servicemanager/v3/servicemanager.proto"
+SM_SOURCES="servicemanager/v4/servicemanager.proto"
 
-UM_SOURCES="updatemanager/v1/updatemanager.proto"
+UM_SOURCES="updatemanager/v2/updatemanager.proto"
 
-CM_SOURCES="communicationmanager/v2/updatescheduler.proto"
+CM_SOURCES="communicationmanager/v3/updatescheduler.proto"
 
 if [ "$#" -lt 1 ]; then
     echo "Usage example: $(basename -- "$0") PROTO_PATH"
