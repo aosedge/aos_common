@@ -165,12 +165,12 @@ type instanceMonitoring struct {
 //
 //nolint:gochecknoglobals
 var (
-	systemCPUPercent                            = cpu.Percent
-	systemVirtualMemory                         = mem.VirtualMemory
-	systemDiskUsage                             = disk.Usage
-	getUserFSQuotaUsage                         = fs.GetUserFSQuotaUsage
-	cpuCount                                    = runtime.NumCPU()
-	hostSystemUsageInstance SystemUsageProvider = nil
+	systemCPUPercent                        = cpu.Percent
+	systemVirtualMemory                     = mem.VirtualMemory
+	systemDiskUsage                         = disk.Usage
+	getUserFSQuotaUsage                     = fs.GetUserFSQuotaUsage
+	cpuCount                                = runtime.NumCPU()
+	instanceUsage       SystemUsageProvider = nil
 )
 
 /***********************************************************************************************************************
