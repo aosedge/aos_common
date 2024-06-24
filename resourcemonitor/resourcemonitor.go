@@ -639,7 +639,7 @@ func getSystemCPUUsage() (cpuUse float64, err error) {
 		return 0, aoserrors.Wrap(err)
 	}
 
-	cpuUse = v[0]
+	cpuUse = v[0] / float64(cpuCount)
 
 	return cpuUse, nil
 }

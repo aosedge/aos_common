@@ -854,7 +854,7 @@ func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID st
 }
 
 func getSystemCPUPercent(interval time.Duration, percpu bool) (percent []float64, err error) {
-	return []float64{systemUsageData.cpu}, nil
+	return []float64{systemUsageData.cpu * float64(cpuCount)}, nil
 }
 
 func getSystemRAM() (virtualMemory *mem.VirtualMemoryStat, err error) {
