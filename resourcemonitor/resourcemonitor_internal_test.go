@@ -802,6 +802,359 @@ func TestInstances(t *testing.T) {
 	}
 }
 
+func TestSystemAveraging(t *testing.T) {
+	duration := 100 * time.Millisecond
+
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:     "testNode",
+			NodeType:   "testNode",
+			Partitions: []cloudprotocol.PartitionInfo{{Name: cloudprotocol.GenericPartition, Path: "."}},
+			MaxDMIPs:   10000,
+		},
+	}
+
+	nodeConfigProvider := &testNodeConfigProvider{}
+
+	monitoringSender := &testMonitoringSender{
+		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
+	}
+	alertSender := &testAlertsSender{}
+	trafficMonitoring := &testTrafficMonitoring{}
+
+	systemCPUPercent = getSystemCPUPercent
+	systemVirtualMemory = getSystemRAM
+	systemDiskUsage = getSystemDisk
+
+	config := Config{
+		PollPeriod:    aostypes.Duration{Duration: duration},
+		AverageWindow: aostypes.Duration{Duration: duration * 3},
+	}
+
+	testData := []testData{
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{inTraffic: 100, outTraffic: 200},
+			},
+			usageData: testUsageData{cpu: 10, ram: 1000, disk: 2000},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				MonitoringData: cloudprotocol.MonitoringData{
+					CPU:        1000,
+					RAM:        1000,
+					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
+					InTraffic:  100,
+					OutTraffic: 200,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{inTraffic: 200, outTraffic: 300},
+			},
+			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				MonitoringData: cloudprotocol.MonitoringData{
+					CPU:        1500,
+					RAM:        1500,
+					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
+					InTraffic:  150,
+					OutTraffic: 250,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{inTraffic: 300, outTraffic: 400},
+			},
+			usageData: testUsageData{cpu: 30, ram: 3000, disk: 6000},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				MonitoringData: cloudprotocol.MonitoringData{
+					CPU:        2000,
+					RAM:        2000,
+					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					InTraffic:  200,
+					OutTraffic: 300,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{inTraffic: 500, outTraffic: 600},
+			},
+			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				MonitoringData: cloudprotocol.MonitoringData{
+					CPU:        2000,
+					RAM:        2000,
+					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					InTraffic:  300,
+					OutTraffic: 400,
+				},
+			},
+		},
+	}
+
+	monitor, err := New(config, nodeInfoProvider, nodeConfigProvider,
+		trafficMonitoring, alertSender, monitoringSender)
+	if err != nil {
+		t.Fatalf("Can't create monitoring instance: %s", err)
+	}
+	defer monitor.Close()
+
+	for _, item := range testData {
+		*trafficMonitoring = item.trafficMonitoring
+		systemUsageData = item.usageData
+
+		select {
+		case <-monitoringSender.monitoringData:
+			averageData, err := monitor.GetAverageMonitoring()
+			if err != nil {
+				t.Errorf("Can't get average monitoring data: %s", err)
+			}
+
+			if !reflect.DeepEqual(averageData.MonitoringData, item.monitoringData.MonitoringData) {
+				t.Errorf("Incorrect average monitoring data: %v", averageData)
+			}
+
+		case <-time.After(duration * 2):
+			t.Fatal("Monitoring data timeout")
+		}
+	}
+}
+
+func TestInstanceAveraging(t *testing.T) {
+	duration := 100 * time.Millisecond
+
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:   "testNode",
+			NodeType: "testNode",
+			MaxDMIPs: 10000,
+		},
+	}
+	nodeConfigProvider := &testNodeConfigProvider{}
+	trafficMonitoring := &testTrafficMonitoring{
+		instanceTraffic: make(map[string]trafficMonitoringData),
+	}
+	alertSender := &testAlertsSender{}
+	monitoringSender := &testMonitoringSender{
+		monitoringData: make(chan cloudprotocol.NodeMonitoringData),
+	}
+	testInstancesUsage := newTestInstancesUsage()
+
+	instanceUsage = testInstancesUsage
+	defer func() {
+		instanceUsage = nil
+	}()
+
+	monitor, err := New(Config{
+		PollPeriod:    aostypes.Duration{Duration: duration},
+		AverageWindow: aostypes.Duration{Duration: duration * 3},
+	},
+		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender, monitoringSender)
+	if err != nil {
+		t.Fatalf("Can't create monitoring instance: %s", err)
+	}
+	defer monitor.Close()
+
+	getUserFSQuotaUsage = testUserFSQuotaUsage
+
+	testData := []testData{
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {inTraffic: 100, outTraffic: 100},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  10,
+				ram:  1000,
+				disk: 2000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: cloudprotocol.MonitoringData{
+							RAM: 1000,
+							CPU: 1000,
+							Disk: []cloudprotocol.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2000},
+							},
+							InTraffic:  100,
+							OutTraffic: 100,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {inTraffic: 200, outTraffic: 200},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  20,
+				ram:  2000,
+				disk: 3000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: cloudprotocol.MonitoringData{
+							RAM: 1500,
+							CPU: 1500,
+							Disk: []cloudprotocol.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2500},
+							},
+							InTraffic:  150,
+							OutTraffic: 150,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {inTraffic: 300, outTraffic: 300},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  30,
+				ram:  3000,
+				disk: 4000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: cloudprotocol.MonitoringData{
+							RAM: 2000,
+							CPU: 2000,
+							Disk: []cloudprotocol.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
+							},
+							InTraffic:  200,
+							OutTraffic: 200,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {inTraffic: 200, outTraffic: 200},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  20,
+				ram:  2000,
+				disk: 3000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: cloudprotocol.NodeMonitoringData{
+				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: cloudprotocol.MonitoringData{
+							RAM: 2000,
+							CPU: 2000,
+							Disk: []cloudprotocol.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
+							},
+							InTraffic:  200,
+							OutTraffic: 200,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	processesData = map[int32]testUsageData{}
+
+	if err := monitor.StartInstanceMonitor(testData[0].instanceID, testData[0].monitoringConfig); err != nil {
+		t.Fatalf("Can't start monitoring instance: %s", err)
+	}
+
+	for _, item := range testData {
+		testInstancesUsage.instances[item.instanceID] = testUsageData{cpu: item.usageData.cpu, ram: item.usageData.ram}
+		processesData[int32(item.monitoringConfig.UID)] = item.usageData
+		trafficMonitoring.instanceTraffic[item.instanceID] = item.trafficMonitoring.instanceTraffic[item.instanceID]
+
+		select {
+		case <-monitoringSender.monitoringData:
+			averageData, err := monitor.GetAverageMonitoring()
+			if err != nil {
+				t.Errorf("Can't get average monitoring data: %s", err)
+			}
+
+			if !reflect.DeepEqual(averageData.ServiceInstances[0].MonitoringData,
+				item.monitoringData.ServiceInstances[0].MonitoringData) {
+				t.Errorf("Incorrect average monitoring data: %v", averageData.ServiceInstances[0].MonitoringData)
+			}
+
+		case <-time.After(duration * 2):
+			t.Fatal("Monitoring data timeout")
+		}
+	}
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/

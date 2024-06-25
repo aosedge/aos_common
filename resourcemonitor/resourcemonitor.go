@@ -108,8 +108,9 @@ type TrafficMonitoring interface {
 
 // Config configuration for resource monitoring.
 type Config struct {
-	PollPeriod aostypes.Duration `json:"pollPeriod"`
-	Source     string            `json:"source"`
+	PollPeriod    aostypes.Duration `json:"pollPeriod"`
+	AverageWindow aostypes.Duration `json:"averageWindow"`
+	Source        string            `json:"source"`
 }
 
 // ResourceMonitor instance.
@@ -124,8 +125,10 @@ type ResourceMonitor struct {
 	sourceSystemUsage  SystemUsageProvider
 
 	pollTimer             *time.Ticker
+	averageWindowCount    uint64
 	nodeInfo              cloudprotocol.NodeInfo
 	nodeMonitoringData    cloudprotocol.MonitoringData
+	nodeAverageData       averageMonitoring
 	instanceMonitoringMap map[string]*instanceMonitoring
 	alertProcessors       *list.List
 
@@ -152,9 +155,18 @@ type instanceMonitoring struct {
 	gid                    uint32
 	partitions             []PartitionParam
 	monitoringData         cloudprotocol.InstanceMonitoringData
+	averageData            averageMonitoring
 	alertProcessorElements []*list.Element
 	prevCPU                uint64
 	prevTime               time.Time
+}
+
+type averageMonitoring struct {
+	ram        *averageCalc
+	cpu        *averageCalc
+	inTraffic  *averageCalc
+	outTraffic *averageCalc
+	disks      map[string]*averageCalc
 }
 
 /***********************************************************************************************************************
@@ -197,6 +209,12 @@ func New(
 	nodeInfo, err := nodeInfoProvider.GetNodeInfo()
 	if err != nil {
 		return nil, aoserrors.Wrap(err)
+	}
+
+	monitor.averageWindowCount = uint64(config.AverageWindow.Duration.Nanoseconds()) /
+		uint64(config.PollPeriod.Duration.Nanoseconds())
+	if monitor.averageWindowCount == 0 {
+		monitor.averageWindowCount = 1
 	}
 
 	if err := monitor.setupNodeMonitoring(nodeInfo); err != nil {
@@ -268,6 +286,9 @@ func (monitor *ResourceMonitor) StartInstanceMonitor(
 		instanceMonitoring.monitoringData.Disk[i].Name = partitionParam.Name
 	}
 
+	instanceMonitoring.averageData = *newAverageMonitoring(
+		monitor.averageWindowCount, instanceMonitoring.monitoringData.Disk)
+
 	if monitoringConfig.AlertRules != nil && monitor.alertSender != nil {
 		if err := monitor.setupInstanceAlerts(
 			instanceID, instanceMonitoring, *monitoringConfig.AlertRules); err != nil {
@@ -298,6 +319,32 @@ func (monitor *ResourceMonitor) StopInstanceMonitor(instanceID string) error {
 	return nil
 }
 
+// GetAverageMonitoring returns average monitoring data.
+func (monitor *ResourceMonitor) GetAverageMonitoring() (cloudprotocol.NodeMonitoringData, error) {
+	monitor.Lock()
+	defer monitor.Unlock()
+
+	log.Debug("Get average monitoring data")
+
+	averageMonitoringData := cloudprotocol.NodeMonitoringData{
+		NodeID:           monitor.nodeInfo.NodeID,
+		Timestamp:        time.Now(),
+		MonitoringData:   monitor.nodeAverageData.toMonitoringData(),
+		ServiceInstances: make([]cloudprotocol.InstanceMonitoringData, 0, len(monitor.instanceMonitoringMap)),
+	}
+
+	for _, instanceMonitoring := range monitor.instanceMonitoringMap {
+		averageMonitoringData.ServiceInstances = append(averageMonitoringData.ServiceInstances,
+			cloudprotocol.InstanceMonitoringData{
+				InstanceIdent:  instanceMonitoring.monitoringData.InstanceIdent,
+				NodeID:         monitor.nodeInfo.NodeID,
+				MonitoringData: instanceMonitoring.averageData.toMonitoringData(),
+			})
+	}
+
+	return averageMonitoringData, nil
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
@@ -319,6 +366,8 @@ func (monitor *ResourceMonitor) setupNodeMonitoring(nodeInfo cloudprotocol.NodeI
 	for i, partitionParam := range nodeInfo.Partitions {
 		monitor.nodeMonitoringData.Disk[i].Name = partitionParam.Name
 	}
+
+	monitor.nodeAverageData = *newAverageMonitoring(monitor.averageWindowCount, monitor.nodeMonitoringData.Disk)
 
 	return nil
 }
@@ -586,6 +635,8 @@ func (monitor *ResourceMonitor) getCurrentSystemData() {
 		monitor.nodeMonitoringData.OutTraffic = outTraffic
 	}
 
+	monitor.nodeAverageData.updateMonitoringData(monitor.nodeMonitoringData)
+
 	log.WithFields(log.Fields{
 		"CPU":  monitor.nodeMonitoringData.CPU,
 		"RAM":  monitor.nodeMonitoringData.RAM,
@@ -620,6 +671,8 @@ func (monitor *ResourceMonitor) getCurrentInstanceData() {
 			value.monitoringData.InTraffic = inTraffic
 			value.monitoringData.OutTraffic = outTraffic
 		}
+
+		value.averageData.updateMonitoringData(value.monitoringData.MonitoringData)
 
 		log.WithFields(log.Fields{
 			"id":   instanceID,
@@ -722,4 +775,60 @@ func getSourceSystemUsage(source string) SystemUsageProvider {
 	}
 
 	return &cgroupsSystemUsage{}
+}
+
+func (monitor *ResourceMonitor) cpuToDMIPs(cpu float64) uint64 {
+	return uint64(math.Round(float64(cpu) * float64(monitor.nodeInfo.MaxDMIPs) / 100.0))
+}
+
+func newAverageMonitoring(windowCount uint64, partitions []cloudprotocol.PartitionUsage) *averageMonitoring {
+	averageMonitoring := &averageMonitoring{
+		ram:        newAverageCalc(windowCount),
+		cpu:        newAverageCalc(windowCount),
+		inTraffic:  newAverageCalc(windowCount),
+		outTraffic: newAverageCalc(windowCount),
+		disks:      make(map[string]*averageCalc),
+	}
+
+	for _, partition := range partitions {
+		averageMonitoring.disks[partition.Name] = newAverageCalc(windowCount)
+	}
+
+	return averageMonitoring
+}
+
+func (average *averageMonitoring) toMonitoringData() cloudprotocol.MonitoringData {
+	monitoringData := cloudprotocol.MonitoringData{
+		CPU:        average.cpu.getIntValue(),
+		RAM:        average.ram.getIntValue(),
+		InTraffic:  average.inTraffic.getIntValue(),
+		OutTraffic: average.outTraffic.getIntValue(),
+		Disk:       make([]cloudprotocol.PartitionUsage, 0, len(average.disks)),
+	}
+
+	for name, diskUsage := range average.disks {
+		monitoringData.Disk = append(monitoringData.Disk, cloudprotocol.PartitionUsage{
+			Name: name, UsedSize: diskUsage.getIntValue(),
+		})
+	}
+
+	return monitoringData
+}
+
+func (average *averageMonitoring) updateMonitoringData(data cloudprotocol.MonitoringData) {
+	average.cpu.calculate(float64(data.CPU))
+	average.ram.calculate(float64(data.RAM))
+	average.inTraffic.calculate(float64(data.InTraffic))
+	average.outTraffic.calculate(float64(data.OutTraffic))
+
+	for _, disk := range data.Disk {
+		averageCalc, ok := average.disks[disk.Name]
+		if !ok {
+			log.Errorf("Can't find disk: %s", disk.Name)
+
+			continue
+		}
+
+		averageCalc.calculate(float64(disk.UsedSize))
+	}
 }
