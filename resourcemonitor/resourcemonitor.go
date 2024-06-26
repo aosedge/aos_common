@@ -306,6 +306,10 @@ func (monitor *ResourceMonitor) setupNodeMonitoring(nodeInfo cloudprotocol.NodeI
 	monitor.Lock()
 	defer monitor.Unlock()
 
+	if nodeInfo.MaxDMIPs == 0 {
+		return aoserrors.Errorf("max DMIPs is 0")
+	}
+
 	monitor.nodeInfo = nodeInfo
 
 	monitor.nodeMonitoringData = cloudprotocol.MonitoringData{
@@ -330,13 +334,17 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 	}
 
 	if nodeConfig.AlertRules.CPU != nil {
+		rules := *nodeConfig.AlertRules.CPU
+		rules.High = monitor.cpuToDMIPs(float64(rules.High))
+		rules.Low = monitor.cpuToDMIPs(float64(rules.Low))
+
 		monitor.alertProcessors.PushBack(createAlertProcessor(
 			"System CPU",
 			&monitor.nodeMonitoringData.CPU,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("cpu", time, value, status))
 			},
-			*nodeConfig.AlertRules.CPU))
+			rules))
 	}
 
 	if nodeConfig.AlertRules.RAM != nil {
@@ -445,6 +453,10 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 	instanceMonitoring.alertProcessorElements = make([]*list.Element, 0)
 
 	if rules.CPU != nil {
+		rules := *rules.CPU
+		rules.High = monitor.cpuToDMIPs(float64(rules.High))
+		rules.Low = monitor.cpuToDMIPs(float64(rules.Low))
+
 		e := monitor.alertProcessors.PushBack(createAlertProcessor(
 			instanceID+" CPU",
 			&instanceMonitoring.monitoringData.CPU,
@@ -452,7 +464,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 				monitor.alertSender.SendInstanceQuotaAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, "cpu", time, value, status))
-			}, *rules.CPU))
+			}, rules))
 
 		instanceMonitoring.alertProcessorElements = append(instanceMonitoring.alertProcessorElements, e)
 	}
@@ -543,7 +555,7 @@ func (monitor *ResourceMonitor) getCurrentSystemData() {
 		log.Errorf("Can't get system CPU: %s", err)
 	}
 
-	monitor.nodeMonitoringData.CPU = uint64(math.Round(cpu))
+	monitor.nodeMonitoringData.CPU = monitor.cpuToDMIPs(cpu)
 
 	monitor.nodeMonitoringData.RAM, err = getSystemRAMUsage()
 	if err != nil {
@@ -589,6 +601,8 @@ func (monitor *ResourceMonitor) getCurrentInstanceData() {
 		if err != nil {
 			log.Errorf("Can't fill system usage info: %v", err)
 		}
+
+		value.monitoringData.CPU = monitor.cpuToDMIPs(float64(value.monitoringData.CPU))
 
 		for i, partitionParam := range value.partitions {
 			value.monitoringData.Disk[i].UsedSize, err = getInstanceDiskUsage(partitionParam.Path, value.uid, value.gid)
@@ -703,8 +717,8 @@ func getSourceSystemUsage(source string) SystemUsageProvider {
 		return &xenSystemUsage{}
 	}
 
-	if hostSystemUsageInstance != nil {
-		return hostSystemUsageInstance
+	if instanceUsage != nil {
+		return instanceUsage
 	}
 
 	return &cgroupsSystemUsage{}

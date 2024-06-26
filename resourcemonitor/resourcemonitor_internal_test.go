@@ -187,6 +187,7 @@ func TestSystemAlerts(t *testing.T) {
 			NodeID:     "testNode",
 			NodeType:   "testNode",
 			Partitions: []cloudprotocol.PartitionInfo{{Name: cloudprotocol.GenericPartition, Path: "."}},
+			MaxDMIPs:   10000,
 		},
 	}
 
@@ -245,7 +246,7 @@ func TestSystemAlerts(t *testing.T) {
 			monitoringData: cloudprotocol.NodeMonitoringData{
 				MonitoringData: cloudprotocol.MonitoringData{
 					RAM:        1100,
-					CPU:        35,
+					CPU:        3500,
 					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 150,
@@ -264,7 +265,7 @@ func TestSystemAlerts(t *testing.T) {
 			monitoringData: cloudprotocol.NodeMonitoringData{
 				MonitoringData: cloudprotocol.MonitoringData{
 					RAM:        1100,
-					CPU:        45,
+					CPU:        4500,
 					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 250,
@@ -276,7 +277,7 @@ func TestSystemAlerts(t *testing.T) {
 				disk: 2300,
 			},
 			systemAlerts: []SystemQuotaAlert{
-				prepareSystemAlertItem("cpu", time.Time{}, 45, "raise"),
+				prepareSystemAlertItem("cpu", time.Time{}, 4500, "raise"),
 				prepareSystemAlertItem("outTraffic", time.Time{}, 250, "raise"),
 			},
 		},
@@ -287,7 +288,7 @@ func TestSystemAlerts(t *testing.T) {
 			monitoringData: cloudprotocol.NodeMonitoringData{
 				MonitoringData: cloudprotocol.MonitoringData{
 					RAM:        2100,
-					CPU:        45,
+					CPU:        4500,
 					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4300}},
 					InTraffic:  350,
 					OutTraffic: 250,
@@ -299,7 +300,7 @@ func TestSystemAlerts(t *testing.T) {
 				disk: 4300,
 			},
 			systemAlerts: []SystemQuotaAlert{
-				prepareSystemAlertItem("cpu", time.Time{}, 45, "raise"),
+				prepareSystemAlertItem("cpu", time.Time{}, 4500, "raise"),
 				prepareSystemAlertItem("ram", time.Time{}, 2100, "raise"),
 				prepareSystemAlertItem("generic", time.Time{}, 4300, "raise"),
 				prepareSystemAlertItem("inTraffic", time.Time{}, 350, "raise"),
@@ -344,6 +345,7 @@ func TestInstances(t *testing.T) {
 		nodeInfo: cloudprotocol.NodeInfo{
 			NodeID:   "testNode",
 			NodeType: "testNode",
+			MaxDMIPs: 10000,
 		},
 	}
 	nodeConfigProvider := &testNodeConfigProvider{}
@@ -438,7 +440,7 @@ func TestInstances(t *testing.T) {
 						},
 						MonitoringData: cloudprotocol.MonitoringData{
 							RAM: 1100,
-							CPU: 35,
+							CPU: 3500,
 							Disk: []cloudprotocol.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
@@ -513,7 +515,7 @@ func TestInstances(t *testing.T) {
 						},
 						MonitoringData: cloudprotocol.MonitoringData{
 							RAM: 2100,
-							CPU: 25,
+							CPU: 2500,
 							Disk: []cloudprotocol.PartitionUsage{
 								{Name: cloudprotocol.LayersPartition, UsedSize: 2300},
 							},
@@ -600,7 +602,7 @@ func TestInstances(t *testing.T) {
 						},
 						MonitoringData: cloudprotocol.MonitoringData{
 							RAM: 2200,
-							CPU: 90,
+							CPU: 9000,
 							Disk: []cloudprotocol.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
@@ -620,7 +622,7 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "cpu", time.Time{}, 90, "raise"),
+				}, "cpu", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
@@ -692,7 +694,7 @@ func TestInstances(t *testing.T) {
 						},
 						MonitoringData: cloudprotocol.MonitoringData{
 							RAM: 2200,
-							CPU: 90,
+							CPU: 9000,
 							Disk: []cloudprotocol.PartitionUsage{
 								{Name: cloudprotocol.StatesPartition, UsedSize: 2300},
 							},
@@ -712,7 +714,7 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "cpu", time.Time{}, 90, "raise"),
+				}, "cpu", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
