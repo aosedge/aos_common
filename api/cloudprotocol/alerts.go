@@ -116,8 +116,8 @@ type ResourceValidateAlert struct {
 // ServiceInstanceAlert system alert structure.
 type ServiceInstanceAlert struct {
 	aostypes.InstanceIdent
-	AosVersion uint64 `json:"aosVersion"`
-	Message    string `json:"message"`
+	ServiceVersion string `json:"version"`
+	Message        string `json:"message"`
 }
 
 // AlertItem alert item structure.
