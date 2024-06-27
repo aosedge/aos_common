@@ -54,8 +54,8 @@ type EnvVarsInstanceStatus struct {
 
 // EnvVarStatus env status with error message.
 type EnvVarStatus struct {
-	ID    string    `json:"id"`
-	Error ErrorInfo `json:"error,omitempty"`
+	ID    string     `json:"id"`
+	Error *ErrorInfo `json:"error,omitempty"`
 }
 
 // OverrideEnvVars request to override service environment variables.
