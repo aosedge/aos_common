@@ -86,7 +86,6 @@ type AlertSender interface {
 // NodeInfoProvider interface to get node information.
 type NodeInfoProvider interface {
 	GetNodeInfo() (cloudprotocol.NodeInfo, error)
-	NodeInfoChangedChannel() <-chan cloudprotocol.NodeInfo
 }
 
 // NodeConfigProvider interface to get node config.
@@ -473,11 +472,6 @@ func (monitor *ResourceMonitor) run(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
-
-		case nodeInfo := <-monitor.nodeInfoProvider.NodeInfoChangedChannel():
-			if err := monitor.setupNodeMonitoring(nodeInfo); err != nil {
-				log.Errorf("Can't setup node info: %v", err)
-			}
 
 		case nodeConfig := <-monitor.nodeConfigProvider.NodeConfigChangedChannel():
 			if err := monitor.setupSystemAlerts(nodeConfig); err != nil {
