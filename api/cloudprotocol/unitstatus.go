@@ -95,17 +95,17 @@ type PartitionInfo struct {
 
 // NodeInfo node information.
 type NodeInfo struct {
-	NodeID     string          `json:"nodeId"`
-	NodeType   string          `json:"nodeType"`
-	Name       string          `json:"name"`
-	Status     string          `json:"status"`
-	CPUs       []CPUInfo       `json:"cpus"`
-	OSType     string          `json:"osType"`
-	MaxDMIPs   uint64          `json:"maxDmips"`
-	TotalRAM   uint64          `json:"totalRam"`
-	Attrs      []string        `json:"attrs,omitempty"`
-	Partitions []PartitionInfo `json:"partitions,omitempty"`
-	ErrorInfo  *ErrorInfo      `json:"errorInfo,omitempty"`
+	NodeID     string                 `json:"nodeId"`
+	NodeType   string                 `json:"nodeType"`
+	Name       string                 `json:"name"`
+	Status     string                 `json:"status"`
+	CPUs       []CPUInfo              `json:"cpus"`
+	OSType     string                 `json:"osType"`
+	MaxDMIPs   uint64                 `json:"maxDmips"`
+	TotalRAM   uint64                 `json:"totalRam"`
+	Attrs      map[string]interface{} `json:"attrs,omitempty"`
+	Partitions []PartitionInfo        `json:"partitions,omitempty"`
+	ErrorInfo  *ErrorInfo             `json:"errorInfo,omitempty"`
 }
 
 // ServiceStatus service status.
