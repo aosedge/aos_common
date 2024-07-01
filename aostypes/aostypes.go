@@ -181,6 +181,13 @@ type AlertRules struct {
 	OutTraffic *AlertRuleParam           `json:"outTraffic,omitempty"`
 }
 
+// ResourceRatiosInfo resource ratios info.
+type ResourceRatiosInfo struct {
+	CPU     float32 `json:"cpu"`
+	Mem     float32 `json:"mem"`
+	Storage float32 `json:"storage"`
+}
+
 // ServiceConfig Aos service configuration.
 type ServiceConfig struct {
 	Created            time.Time                    `json:"created"`

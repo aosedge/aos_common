@@ -73,23 +73,16 @@ type ResourceInfo struct {
 	Hosts  []HostInfo        `json:"hosts,omitempty"`
 }
 
-// ResourceOvercommits resource overcommits.
-type ResourceOvercommits struct {
-	CPU     float32 `json:"cpu"`
-	Mem     float32 `json:"mem"`
-	Storage float32 `json:"storage"`
-}
-
 // NodeConfig node configuration.
 type NodeConfig struct {
-	NodeID              *string              `json:"nodeId,omitempty"`
-	NodeType            string               `json:"nodeType"`
-	ResourceOvercommits ResourceOvercommits  `json:"overcommits"`
-	AlertRules          *aostypes.AlertRules `json:"alertRules,omitempty"`
-	Devices             []DeviceInfo         `json:"devices,omitempty"`
-	Resources           []ResourceInfo       `json:"resources,omitempty"`
-	Labels              []string             `json:"labels,omitempty"`
-	Priority            uint32               `json:"priority,omitempty"`
+	NodeID         *string                      `json:"nodeId,omitempty"`
+	NodeType       string                       `json:"nodeType"`
+	ResourceRatios *aostypes.ResourceRatiosInfo `json:"resourceRatios,omitempty"`
+	AlertRules     *aostypes.AlertRules         `json:"alertRules,omitempty"`
+	Devices        []DeviceInfo                 `json:"devices,omitempty"`
+	Resources      []ResourceInfo               `json:"resources,omitempty"`
+	Labels         []string                     `json:"labels,omitempty"`
+	Priority       uint32                       `json:"priority,omitempty"`
 }
 
 // UnitConfig unit configuration.
