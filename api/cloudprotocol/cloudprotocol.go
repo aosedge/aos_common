@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aoscloud/aos_common/aostypes"
+	"github.com/aosedge/aos_common/aostypes"
 )
 
 /***********************************************************************************************************************

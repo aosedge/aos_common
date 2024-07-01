@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/aoscloud/aos_common/utils/syncstream"
+	"github.com/aosedge/aos_common/utils/syncstream"
 )
 
 /***********************************************************************************************************************

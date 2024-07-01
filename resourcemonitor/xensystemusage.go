@@ -18,7 +18,7 @@
 package resourcemonitor
 
 import (
-	"github.com/aoscloud/aos_common/utils/xentop"
+	"github.com/aosedge/aos_common/utils/xentop"
 	log "github.com/sirupsen/logrus"
 )
 

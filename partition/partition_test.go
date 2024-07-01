@@ -24,8 +24,8 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/aoscloud/aos_common/partition"
-	"github.com/aoscloud/aos_common/utils/testtools"
+	"github.com/aosedge/aos_common/partition"
+	"github.com/aosedge/aos_common/utils/testtools"
 )
 
 /*******************************************************************************

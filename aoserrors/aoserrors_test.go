@@ -23,7 +23,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/aoscloud/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/aoserrors"
 )
 
 var errTestError = errors.New("test error")

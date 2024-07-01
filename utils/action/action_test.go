@@ -22,8 +22,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/aoscloud/aos_common/aoserrors"
-	"github.com/aoscloud/aos_common/utils/action"
+	"github.com/aosedge/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/utils/action"
 )
 
 /***********************************************************************************************************************

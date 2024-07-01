@@ -28,9 +28,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aoscloud/aos_common/aoserrors"
-	"github.com/aoscloud/aos_common/spaceallocator"
-	"github.com/aoscloud/aos_common/utils/testtools"
+	"github.com/aosedge/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/spaceallocator"
+	"github.com/aosedge/aos_common/utils/testtools"
 	log "github.com/sirupsen/logrus"
 )
 

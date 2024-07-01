@@ -39,9 +39,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aoscloud/aos_common/aoserrors"
-	"github.com/aoscloud/aos_common/utils/cryptutils"
-	"github.com/aoscloud/aos_common/utils/testtools"
+	"github.com/aosedge/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/utils/cryptutils"
+	"github.com/aosedge/aos_common/utils/testtools"
 )
 
 /***********************************************************************************************************************

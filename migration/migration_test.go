@@ -29,8 +29,8 @@ import (
 	_ "github.com/mattn/go-sqlite3" // ignore lint
 	log "github.com/sirupsen/logrus"
 
-	"github.com/aoscloud/aos_common/aoserrors"
-	"github.com/aoscloud/aos_common/migration"
+	"github.com/aosedge/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/migration"
 )
 
 /***********************************************************************************************************************

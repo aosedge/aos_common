@@ -1,10 +1,10 @@
-module github.com/aoscloud/aos_common
+module github.com/aosedge/aos_common
 
 go 1.21
 
-replace github.com/ThalesIgnite/crypto11 => github.com/aoscloud/crypto11 v1.0.3-0.20220217163524-ddd0ace39e6f
+replace github.com/ThalesIgnite/crypto11 => github.com/aosedge/crypto11 v1.0.3-0.20220217163524-ddd0ace39e6f
 
-replace github.com/anexia-it/fsquota => github.com/aoscloud/fsquota v0.0.0-20231127111317-842d831105a7
+replace github.com/anexia-it/fsquota => github.com/aosedge/fsquota v0.0.0-20231127111317-842d831105a7
 
 require (
 	github.com/ThalesIgnite/crypto11 v0.0.0-00010101000000-000000000000
