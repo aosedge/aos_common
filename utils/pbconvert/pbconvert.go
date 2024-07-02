@@ -20,15 +20,38 @@ package pbconvert
 import (
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
-	pb "github.com/aosedge/aos_common/api/servicemanager"
+	pbcommon "github.com/aosedge/aos_common/api/common"
+	pbsm "github.com/aosedge/aos_common/api/servicemanager"
 )
 
 /***********************************************************************************************************************
  * Public
  **********************************************************************************************************************/
 
-func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pb.InstanceIdent {
-	ident := &pb.InstanceIdent{ServiceId: "", SubjectId: "", Instance: -1}
+// NewInstanceFilterFromPB converts InstanceFilter from protobuf to AOS type.
+func NewInstanceFilterFromPB(filter *pbsm.InstanceFilter) cloudprotocol.InstanceFilter {
+	aosFilter := cloudprotocol.InstanceFilter{}
+
+	if filter.GetServiceId() != "" {
+		aosFilter.ServiceID = &filter.ServiceId
+	}
+
+	if filter.GetSubjectId() != "" {
+		aosFilter.SubjectID = &filter.SubjectId
+	}
+
+	if filter.GetInstance() != -1 {
+		instance := (uint64)(filter.GetInstance())
+
+		aosFilter.Instance = &instance
+	}
+
+	return aosFilter
+}
+
+// InstanceFilterToPB converts InstanceFilter from AOS type to protobuf.
+func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pbsm.InstanceFilter {
+	ident := &pbsm.InstanceFilter{ServiceId: "", SubjectId: "", Instance: -1}
 
 	if filter.ServiceID != nil {
 		ident.ServiceId = *filter.ServiceID
@@ -45,42 +68,48 @@ func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pb.InstanceIdent {
 	return ident
 }
 
-func InstanceIdentToPB(ident aostypes.InstanceIdent) *pb.InstanceIdent {
-	return &pb.InstanceIdent{ServiceId: ident.ServiceID, SubjectId: ident.SubjectID, Instance: int64(ident.Instance)}
-}
-
-func NetworkParametersToPB(params aostypes.NetworkParameters) *pb.NetworkParameters {
-	networkParams := &pb.NetworkParameters{
-		Ip:         params.IP,
-		Subnet:     params.Subnet,
-		VlanId:     params.VlanID,
-		DnsServers: make([]string, len(params.DNSServers)),
-		Rules:      make([]*pb.FirewallRule, len(params.FirewallRules)),
-	}
-
-	copy(networkParams.GetDnsServers(), params.DNSServers)
-
-	for i, rule := range params.FirewallRules {
-		networkParams.Rules[i] = &pb.FirewallRule{
-			DstIp:   rule.DstIP,
-			SrcIp:   rule.SrcIP,
-			DstPort: rule.DstPort,
-			Proto:   rule.Proto,
-		}
-	}
-
-	return networkParams
-}
-
-func NewInstanceIdentFromPB(ident *pb.InstanceIdent) aostypes.InstanceIdent {
+// NewInstanceIdentFromPB converts InstanceIdent from protobuf to AOS type.
+func NewInstanceIdentFromPB(ident *pbcommon.InstanceIdent) aostypes.InstanceIdent {
 	return aostypes.InstanceIdent{
 		ServiceID: ident.GetServiceId(),
 		SubjectID: ident.GetSubjectId(),
-		Instance:  uint64(ident.GetInstance()),
+		Instance:  ident.GetInstance(),
 	}
 }
 
-func NewNetworkParametersFromPB(params *pb.NetworkParameters) aostypes.NetworkParameters {
+// InstanceIdentToPB converts InstanceIdent from AOS type to protobuf.
+func InstanceIdentToPB(ident aostypes.InstanceIdent) *pbcommon.InstanceIdent {
+	return &pbcommon.InstanceIdent{ServiceId: ident.ServiceID, SubjectId: ident.SubjectID, Instance: ident.Instance}
+}
+
+// NewErrorInfoFromPB converts ErrorInfo from protobuf to AOS type.
+func NewErrorInfoFromPB(errorInfo *pbcommon.ErrorInfo) *cloudprotocol.ErrorInfo {
+	if errorInfo == nil {
+		return nil
+	}
+
+	return &cloudprotocol.ErrorInfo{
+		AosCode:  int(errorInfo.GetAosCode()),
+		ExitCode: int(errorInfo.GetExitCode()),
+		Message:  errorInfo.GetMessage(),
+	}
+}
+
+// ErrorInfoToPB converts ErrorInfo from AOS type to protobuf.
+func ErrorInfoToPB(errorInfo *cloudprotocol.ErrorInfo) *pbcommon.ErrorInfo {
+	if errorInfo == nil {
+		return nil
+	}
+
+	return &pbcommon.ErrorInfo{
+		AosCode:  int32(errorInfo.AosCode),
+		ExitCode: int32(errorInfo.ExitCode),
+		Message:  errorInfo.Message,
+	}
+}
+
+// NewNetworkParametersFromPB converts NetworkParameters from protobuf to AOS type.
+func NewNetworkParametersFromPB(params *pbsm.NetworkParameters) aostypes.NetworkParameters {
 	networkParams := aostypes.NetworkParameters{
 		IP:            params.GetIp(),
 		Subnet:        params.GetSubnet(),
@@ -97,6 +126,30 @@ func NewNetworkParametersFromPB(params *pb.NetworkParameters) aostypes.NetworkPa
 			SrcIP:   rule.GetSrcIp(),
 			DstPort: rule.GetDstPort(),
 			Proto:   rule.GetProto(),
+		}
+	}
+
+	return networkParams
+}
+
+// NetworkParametersToPB converts NetworkParameters from AOS type to protobuf.
+func NetworkParametersToPB(params aostypes.NetworkParameters) *pbsm.NetworkParameters {
+	networkParams := &pbsm.NetworkParameters{
+		Ip:         params.IP,
+		Subnet:     params.Subnet,
+		VlanId:     params.VlanID,
+		DnsServers: make([]string, len(params.DNSServers)),
+		Rules:      make([]*pbsm.FirewallRule, len(params.FirewallRules)),
+	}
+
+	copy(networkParams.GetDnsServers(), params.DNSServers)
+
+	for i, rule := range params.FirewallRules {
+		networkParams.Rules[i] = &pbsm.FirewallRule{
+			DstIp:   rule.DstIP,
+			SrcIp:   rule.SrcIP,
+			DstPort: rule.DstPort,
+			Proto:   rule.Proto,
 		}
 	}
 
