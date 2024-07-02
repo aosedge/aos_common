@@ -53,3 +53,10 @@ type ErrorInfo struct {
 	ExitCode int    `json:"exitCode"`
 	Message  string `json:"message,omitempty"`
 }
+
+// InstanceFilter instance filter structure.
+type InstanceFilter struct {
+	ServiceID *string `json:"serviceId,omitempty"`
+	SubjectID *string `json:"subjectId,omitempty"`
+	Instance  *uint64 `json:"instance,omitempty"`
+}

@@ -40,13 +40,6 @@ const (
  * Types
  **********************************************************************************************************************/
 
-// InstanceFilter instance filter structure.
-type InstanceFilter struct {
-	ServiceID *string `json:"serviceId,omitempty"`
-	SubjectID *string `json:"subjectId,omitempty"`
-	Instance  *uint64 `json:"instance,omitempty"`
-}
-
 // LogFilter request log message.
 type LogFilter struct {
 	From    *time.Time `json:"from"`
