@@ -119,11 +119,11 @@ type ServiceStatus struct {
 // InstanceStatus service instance runtime status.
 type InstanceStatus struct {
 	aostypes.InstanceIdent
-	Version       string     `json:"version"`
-	StateChecksum string     `json:"stateChecksum,omitempty"`
-	RunState      string     `json:"runState"`
-	NodeID        string     `json:"nodeId"`
-	ErrorInfo     *ErrorInfo `json:"errorInfo,omitempty"`
+	ServiceVersion string     `json:"version"`
+	StateChecksum  string     `json:"stateChecksum,omitempty"`
+	RunState       string     `json:"runState"`
+	NodeID         string     `json:"nodeId"`
+	ErrorInfo      *ErrorInfo `json:"errorInfo,omitempty"`
 }
 
 // LayerStatus layer status.
