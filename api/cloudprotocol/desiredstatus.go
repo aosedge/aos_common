@@ -29,7 +29,7 @@ import (
  **********************************************************************************************************************/
 
 // DesiredStatusMessageType desired status message type.
-const DesiresStatusMessageType = "desiredStatus"
+const DesiredStatusMessageType = "desiredStatus"
 
 // SOTA/FOTA schedule type.
 const (
