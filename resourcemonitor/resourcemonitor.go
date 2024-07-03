@@ -66,21 +66,9 @@ type QuotaAlert struct {
 	Status    string
 }
 
-// SystemQuotaAlert system quota alert structure.
-type SystemQuotaAlert struct {
-	QuotaAlert
-}
-
-// InstanceQuotaAlert instance quota alert structure.
-type InstanceQuotaAlert struct {
-	InstanceIdent aostypes.InstanceIdent
-	QuotaAlert
-}
-
 // AlertSender interface to send resource alerts.
 type AlertSender interface {
-	SendSystemQuotaAlert(alert SystemQuotaAlert)
-	SendInstanceQuotaAlert(alert InstanceQuotaAlert)
+	SendAlert(alert cloudprotocol.AlertItem)
 }
 
 // NodeInfoProvider interface to get node information.
@@ -390,7 +378,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 			"System CPU",
 			&monitor.nodeMonitoringData.CPU,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("cpu", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem("cpu", time, value, status))
 			},
 			rules))
 	}
@@ -400,7 +388,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 			"System RAM",
 			&monitor.nodeMonitoringData.RAM,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("ram", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem("ram", time, value, status))
 			},
 			*nodeConfig.AlertRules.RAM))
 	}
@@ -419,7 +407,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 			"Partition "+diskRule.Name,
 			diskUsageValue,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem(diskRule.Name, time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem(diskRule.Name, time, value, status))
 			},
 			diskRule.AlertRuleParam))
 	}
@@ -429,7 +417,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 			"IN Traffic",
 			&monitor.nodeMonitoringData.InTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("inTraffic", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem("inTraffic", time, value, status))
 			},
 			*nodeConfig.AlertRules.InTraffic))
 	}
@@ -439,7 +427,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 			"OUT Traffic",
 			&monitor.nodeMonitoringData.OutTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendSystemQuotaAlert(prepareSystemAlertItem("outTraffic", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem("outTraffic", time, value, status))
 			},
 			*nodeConfig.AlertRules.OutTraffic))
 	}
@@ -504,7 +492,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 			instanceID+" CPU",
 			&instanceMonitoring.monitoringData.CPU,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendInstanceQuotaAlert(
+				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, "cpu", time, value, status))
 			}, rules))
@@ -517,7 +505,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 			instanceID+" RAM",
 			&instanceMonitoring.monitoringData.RAM,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendInstanceQuotaAlert(
+				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, "ram", time, value, status))
 			}, *rules.RAM))
@@ -539,7 +527,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 			instanceID+" Partition "+diskRule.Name,
 			diskUsageValue,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendInstanceQuotaAlert(
+				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, diskRule.Name, time, value, status))
 			}, diskRule.AlertRuleParam))
@@ -552,7 +540,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 			instanceID+" Traffic IN",
 			&instanceMonitoring.monitoringData.InTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendInstanceQuotaAlert(
+				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, "inTraffic", time, value, status))
 			}, *rules.InTraffic))
@@ -565,7 +553,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 			instanceID+" Traffic OUT",
 			&instanceMonitoring.monitoringData.OutTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendInstanceQuotaAlert(
+				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoringData.InstanceIdent, "outTraffic", time, value, status))
 			}, *rules.OutTraffic))
@@ -734,10 +722,13 @@ func getInstanceDiskUsage(path string, uid, gid uint32) (diskUse uint64, err err
 	return diskUse, nil
 }
 
-func prepareSystemAlertItem(parameter string, timestamp time.Time, value uint64, status string) SystemQuotaAlert {
-	return SystemQuotaAlert{
-		QuotaAlert: QuotaAlert{
-			Timestamp: timestamp,
+func prepareSystemAlertItem(
+	parameter string, timestamp time.Time, value uint64, status string,
+) cloudprotocol.AlertItem {
+	return cloudprotocol.AlertItem{
+		Timestamp: timestamp,
+		Tag:       cloudprotocol.AlertTagSystemQuota,
+		Payload: cloudprotocol.SystemQuotaAlert{
 			Parameter: parameter,
 			Value:     value,
 			Status:    status,
@@ -747,14 +738,15 @@ func prepareSystemAlertItem(parameter string, timestamp time.Time, value uint64,
 
 func prepareInstanceAlertItem(
 	instanceIndent aostypes.InstanceIdent, parameter string, timestamp time.Time, value uint64, status string,
-) InstanceQuotaAlert {
-	return InstanceQuotaAlert{
-		InstanceIdent: instanceIndent,
-		QuotaAlert: QuotaAlert{
-			Timestamp: timestamp,
-			Parameter: parameter,
-			Value:     value,
-			Status:    status,
+) cloudprotocol.AlertItem {
+	return cloudprotocol.AlertItem{
+		Timestamp: timestamp,
+		Tag:       cloudprotocol.AlertTagInstanceQuota,
+		Payload: cloudprotocol.InstanceQuotaAlert{
+			InstanceIdent: instanceIndent,
+			Parameter:     parameter,
+			Value:         value,
+			Status:        status,
 		},
 	}
 }

@@ -53,8 +53,7 @@ func init() {
  **********************************************************************************************************************/
 
 type testAlertsSender struct {
-	systemAlerts   []SystemQuotaAlert
-	instanceAlerts []InstanceQuotaAlert
+	alerts []cloudprotocol.AlertItem
 }
 
 type testMonitoringSender struct {
@@ -79,8 +78,7 @@ type testUsageData struct {
 }
 
 type testData struct {
-	systemAlerts      []SystemQuotaAlert
-	instanceAlerts    []InstanceQuotaAlert
+	alerts            []cloudprotocol.AlertItem
 	monitoringData    cloudprotocol.NodeMonitoringData
 	trafficMonitoring testTrafficMonitoring
 	usageData         testUsageData
@@ -276,7 +274,7 @@ func TestSystemAlerts(t *testing.T) {
 				ram:  1100,
 				disk: 2300,
 			},
-			systemAlerts: []SystemQuotaAlert{
+			alerts: []cloudprotocol.AlertItem{
 				prepareSystemAlertItem("cpu", time.Time{}, 4500, "raise"),
 				prepareSystemAlertItem("outTraffic", time.Time{}, 250, "raise"),
 			},
@@ -299,7 +297,7 @@ func TestSystemAlerts(t *testing.T) {
 				ram:  2100,
 				disk: 4300,
 			},
-			systemAlerts: []SystemQuotaAlert{
+			alerts: []cloudprotocol.AlertItem{
 				prepareSystemAlertItem("cpu", time.Time{}, 4500, "raise"),
 				prepareSystemAlertItem("ram", time.Time{}, 2100, "raise"),
 				prepareSystemAlertItem("generic", time.Time{}, 4300, "raise"),
@@ -326,8 +324,12 @@ func TestSystemAlerts(t *testing.T) {
 				t.Errorf("Incorrect system monitoring data: %v", monitoringData.MonitoringData)
 			}
 
-			if !reflect.DeepEqual(alertSender.systemAlerts, item.systemAlerts) {
-				t.Errorf("Incorrect system alerts: %v", alertSender.systemAlerts)
+			for i := range alertSender.alerts {
+				alertSender.alerts[i].Timestamp = time.Time{}
+			}
+
+			if !reflect.DeepEqual(alertSender.alerts, item.alerts) {
+				t.Errorf("Incorrect system alerts: %v", alertSender.alerts)
 			}
 
 		case <-time.After(duration * 2):
@@ -525,7 +527,7 @@ func TestInstances(t *testing.T) {
 					},
 				},
 			},
-			instanceAlerts: []InstanceQuotaAlert{
+			alerts: []cloudprotocol.AlertItem{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
@@ -612,7 +614,7 @@ func TestInstances(t *testing.T) {
 					},
 				},
 			},
-			instanceAlerts: []InstanceQuotaAlert{
+			alerts: []cloudprotocol.AlertItem{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
@@ -704,7 +706,7 @@ func TestInstances(t *testing.T) {
 					},
 				},
 			},
-			instanceAlerts: []InstanceQuotaAlert{
+			alerts: []cloudprotocol.AlertItem{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
@@ -740,7 +742,7 @@ func TestInstances(t *testing.T) {
 			t.Fatalf("Can't start monitoring instance: %s", err)
 		}
 
-		expectedInstanceAlertCount += len(item.instanceAlerts)
+		expectedInstanceAlertCount += len(item.alerts)
 	}
 
 	select {
@@ -764,20 +766,22 @@ func TestInstances(t *testing.T) {
 		t.Fatal("Monitoring data timeout")
 	}
 
-	if len(alertSender.instanceAlerts) != expectedInstanceAlertCount {
-		t.Fatalf("Incorrect alerts number: %d", len(alertSender.instanceAlerts))
+	if len(alertSender.alerts) != expectedInstanceAlertCount {
+		t.Fatalf("Incorrect alerts number: %d", len(alertSender.alerts))
 	}
 
 	for i, item := range testData {
 	alertLoop:
-		for _, expectedAlert := range item.instanceAlerts {
-			for _, receivedAlert := range alertSender.instanceAlerts {
-				if expectedAlert == receivedAlert {
+		for _, expectedAlert := range item.alerts {
+			for _, receivedAlert := range alertSender.alerts {
+				receivedAlert.Timestamp = time.Time{}
+
+				if reflect.DeepEqual(expectedAlert, receivedAlert) {
 					continue alertLoop
 				}
 			}
 
-			t.Error("Incorrect instance alert payload: ", expectedAlert)
+			t.Errorf("Incorrect instance alert payload: %v", expectedAlert)
 		}
 
 		instanceID := fmt.Sprintf("instance%d", i)
@@ -1159,14 +1163,8 @@ func TestInstanceAveraging(t *testing.T) {
  * Interfaces
  **********************************************************************************************************************/
 
-func (sender *testAlertsSender) SendSystemQuotaAlert(alert SystemQuotaAlert) {
-	alert.Timestamp = time.Time{}
-	sender.systemAlerts = append(sender.systemAlerts, alert)
-}
-
-func (sender *testAlertsSender) SendInstanceQuotaAlert(alert InstanceQuotaAlert) {
-	alert.Timestamp = time.Time{}
-	sender.instanceAlerts = append(sender.instanceAlerts, alert)
+func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
+	sender.alerts = append(sender.alerts, alert)
 }
 
 func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudprotocol.NodeMonitoringData) {
