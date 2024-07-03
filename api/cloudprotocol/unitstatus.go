@@ -17,7 +17,12 @@
 
 package cloudprotocol
 
-import "github.com/aosedge/aos_common/aostypes"
+import (
+	"strings"
+
+	"github.com/aosedge/aos_common/aoserrors"
+	"github.com/aosedge/aos_common/aostypes"
+)
 
 /***********************************************************************************************************************
  * Consts
@@ -62,6 +67,21 @@ const (
 	NodeStatusProvisioned   = "provisioned"
 	NodeStatusPaused        = "paused"
 	NodeStatusError         = "error"
+)
+
+// Node attribute names.
+const (
+	NodeAttrMainNode      = "MainNode"
+	NodeAttrAosComponents = "AosComponents"
+	NodeAttrRunners       = "NodeRunners"
+)
+
+// Node attribute values.
+const (
+	AosComponentCM  = "cm"
+	AosComponentIAM = "iam"
+	AosComponentSM  = "sm"
+	AosComponentUM  = "um"
 )
 
 /***********************************************************************************************************************
@@ -155,4 +175,46 @@ type UnitStatus struct {
 	Layers       []LayerStatus      `json:"layers,omitempty"`
 	Components   []ComponentStatus  `json:"components"`
 	UnitSubjects []string           `json:"unitSubjects"`
+}
+
+/***********************************************************************************************************************
+ * Public
+ **********************************************************************************************************************/
+
+func (nodeInfo *NodeInfo) IsMainNode() bool {
+	_, ok := nodeInfo.Attrs[NodeAttrMainNode]
+
+	return ok
+}
+
+func (nodeInfo *NodeInfo) GetAosComponents() ([]string, error) {
+	return nodeInfo.attrToStringSlice(NodeAttrAosComponents)
+}
+
+func (nodeInfo *NodeInfo) GetNodeRunners() ([]string, error) {
+	return nodeInfo.attrToStringSlice(NodeAttrRunners)
+}
+
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+func (nodeInfo *NodeInfo) attrToStringSlice(attrName string) ([]string, error) {
+	attrValue, ok := nodeInfo.Attrs[attrName]
+	if !ok {
+		return nil, aoserrors.Errorf("attribute %s not found", attrName)
+	}
+
+	attrString, ok := attrValue.(string)
+	if !ok {
+		return nil, aoserrors.New("invalid attribute type")
+	}
+
+	values := strings.Split(attrString, ",")
+
+	for i := range values {
+		values[i] = strings.TrimSpace(values[i])
+	}
+
+	return values, nil
 }
