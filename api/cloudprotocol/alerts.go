@@ -68,15 +68,13 @@ type CoreAlert struct {
 
 // DownloadAlert download alert structure.
 type DownloadAlert struct {
-	TargetType          string `json:"targetType"`
-	TargetID            string `json:"targetId"`
-	TargetAosVersion    uint64 `json:"targetAosVersion"`
-	TargetVendorVersion string `json:"targetVendorVersion"`
-	Message             string `json:"message"`
-	Progress            string `json:"progress"`
-	URL                 string `json:"url"`
-	DownloadedBytes     string `json:"downloadedBytes"`
-	TotalBytes          string `json:"totalBytes"`
+	TargetType      string `json:"targetType"`
+	TargetID        string `json:"targetId"`
+	Version         string `json:"version"`
+	Message         string `json:"message"`
+	URL             string `json:"url"`
+	DownloadedBytes string `json:"downloadedBytes"`
+	TotalBytes      string `json:"totalBytes"`
 }
 
 // SystemQuotaAlert system quota alert structure.
