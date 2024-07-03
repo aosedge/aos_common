@@ -55,6 +55,12 @@ const (
 	LayersPartition   = "layers"
 )
 
+// BalancingPolicy types.
+const (
+	BalancingEnabled  = "enabled"
+	BalancingDisabled = "disabled"
+)
+
 /***********************************************************************************************************************
  * Types
  **********************************************************************************************************************/
@@ -193,16 +199,18 @@ type ServiceConfig struct {
 	Created            time.Time                    `json:"created"`
 	Author             string                       `json:"author"`
 	Hostname           *string                      `json:"hostname,omitempty"`
+	BalancingPolicy    string                       `json:"balancingPolicy"`
 	Runner             string                       `json:"runner"`
+	RunParameters      RunParameters                `json:"runParameters,omitempty"`
 	Sysctl             map[string]string            `json:"sysctl,omitempty"`
 	OfflineTTL         Duration                     `json:"offlineTtl,omitempty"`
 	Quotas             ServiceQuotas                `json:"quotas"`
+	ResourceRatios     *ResourceRatiosInfo          `json:"resourceRatios"`
 	AllowedConnections map[string]struct{}          `json:"allowedConnections,omitempty"`
 	Devices            []ServiceDevice              `json:"devices,omitempty"`
 	Resources          []string                     `json:"resources,omitempty"`
 	Permissions        map[string]map[string]string `json:"permissions,omitempty"`
 	AlertRules         *AlertRules                  `json:"alertRules,omitempty"`
-	RunParameters      RunParameters                `json:"runParameters,omitempty"`
 }
 
 /***********************************************************************************************************************
