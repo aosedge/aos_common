@@ -82,6 +82,7 @@ type SystemQuotaAlert struct {
 	NodeID    string `json:"nodeId"`
 	Parameter string `json:"parameter"`
 	Value     uint64 `json:"value"`
+	Status    string `json:"-"`
 }
 
 // InstanceQuotaAlert instance quota alert structure.
@@ -89,6 +90,7 @@ type InstanceQuotaAlert struct {
 	aostypes.InstanceIdent
 	Parameter string `json:"parameter"`
 	Value     uint64 `json:"value"`
+	Status    string `json:"-"`
 }
 
 // DeviceAllocateAlert device allocate alert structure.
@@ -99,16 +101,11 @@ type DeviceAllocateAlert struct {
 	Message string `json:"message"`
 }
 
-// ResourceValidateError resource validate error structure.
-type ResourceValidateError struct {
-	Name   string   `json:"name"`
-	Errors []string `json:"error"`
-}
-
 // ResourceValidateAlert resource validate alert structure.
 type ResourceValidateAlert struct {
-	NodeID          string                  `json:"nodeId"`
-	ResourcesErrors []ResourceValidateError `json:"resourcesErrors"`
+	NodeID string      `json:"nodeId"`
+	Name   string      `json:"name"`
+	Errors []ErrorInfo `json:"errors"`
 }
 
 // ServiceInstanceAlert system alert structure.
