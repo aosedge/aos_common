@@ -21,6 +21,7 @@ import (
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
 	pbcommon "github.com/aosedge/aos_common/api/common"
+	pbiam "github.com/aosedge/aos_common/api/iamanager"
 	pbsm "github.com/aosedge/aos_common/api/servicemanager"
 )
 
@@ -154,4 +155,58 @@ func NetworkParametersToPB(params aostypes.NetworkParameters) *pbsm.NetworkParam
 	}
 
 	return networkParams
+}
+
+// NewNodeInfoFromPB converts NodeInfo from protobuf to Aos type.
+func NewNodeInfoFromPB(pbNodeInfo *pbiam.NodeInfo) cloudprotocol.NodeInfo {
+	nodeInfo := cloudprotocol.NodeInfo{
+		NodeID:    pbNodeInfo.GetNodeId(),
+		NodeType:  pbNodeInfo.GetNodeType(),
+		Name:      pbNodeInfo.GetName(),
+		Status:    pbNodeInfo.GetStatus(),
+		OSType:    pbNodeInfo.GetOsType(),
+		MaxDMIPs:  pbNodeInfo.GetMaxDmips(),
+		TotalRAM:  pbNodeInfo.GetTotalRam(),
+		ErrorInfo: NewErrorInfoFromPB(pbNodeInfo.GetError()),
+	}
+
+	if pbNodeInfo.GetCpus() != nil {
+		nodeInfo.CPUs = make([]cloudprotocol.CPUInfo, 0, len(pbNodeInfo.GetCpus()))
+
+		for _, cpu := range pbNodeInfo.GetCpus() {
+			nodeInfo.CPUs = append(nodeInfo.CPUs, cloudprotocol.CPUInfo{
+				ModelName:  cpu.GetModelName(),
+				NumCores:   cpu.GetNumCores(),
+				NumThreads: cpu.GetNumThreads(),
+				Arch:       cpu.GetArch(),
+				ArchFamily: cpu.GetArchFamily(),
+				MaxDMIPs:   cpu.GetMaxDmips(),
+			})
+		}
+	}
+
+	if pbNodeInfo.GetAttrs() != nil {
+		nodeInfo.Attrs = make(map[string]interface{})
+
+		for _, attr := range pbNodeInfo.GetAttrs() {
+			nodeInfo.Attrs[attr.GetName()] = attr.GetValue()
+		}
+	}
+
+	if pbNodeInfo.GetPartitions() != nil {
+		nodeInfo.Partitions = make([]cloudprotocol.PartitionInfo, 0, len(pbNodeInfo.GetPartitions()))
+
+		for _, partition := range pbNodeInfo.GetPartitions() {
+			partitionInfo := cloudprotocol.PartitionInfo{
+				Name:      partition.GetName(),
+				Types:     partition.GetTypes(),
+				TotalSize: partition.GetTotalSize(),
+				Path:      partition.GetPath(),
+			}
+
+			nodeInfo.Partitions = append(nodeInfo.Partitions, partitionInfo)
+		}
+	}
+
+	return nodeInfo
 }

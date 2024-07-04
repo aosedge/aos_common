@@ -25,7 +25,9 @@ import (
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
 	pbcommon "github.com/aosedge/aos_common/api/common"
+	pbiam "github.com/aosedge/aos_common/api/iamanager"
 	pbsm "github.com/aosedge/aos_common/api/servicemanager"
+
 	"github.com/aosedge/aos_common/utils/pbconvert"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
@@ -203,6 +205,78 @@ func TestErrorInfoFromPB(t *testing.T) {
 		&pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"})
 
 	if *expectedErrorInfo != *receivedErrorInfo {
-		t.Error("Incorrect instance")
+		t.Error("Incorrect error info")
+	}
+}
+
+func TestNodeInfoFromPB(t *testing.T) {
+	expectedNodeInfo := cloudprotocol.NodeInfo{
+		NodeID:   "node1",
+		NodeType: "type1",
+		Name:     "name1",
+		Status:   "status1",
+		CPUs: []cloudprotocol.CPUInfo{
+			{
+				ModelName:  "model1",
+				NumCores:   1,
+				NumThreads: 2,
+				Arch:       "arch1",
+				ArchFamily: "family1",
+				MaxDMIPs:   3,
+			},
+			{
+				ModelName:  "model1",
+				NumCores:   1,
+				NumThreads: 2,
+				Arch:       "arch1",
+				ArchFamily: "family1",
+				MaxDMIPs:   3,
+			},
+		},
+		OSType:   "os1",
+		MaxDMIPs: 4,
+		TotalRAM: 5,
+		Attrs: map[string]interface{}{
+			"attr1": "value1",
+			"attr2": "value2",
+		},
+		Partitions: []cloudprotocol.PartitionInfo{{
+			Name:      "part1",
+			Types:     []string{"type1", "type2"},
+			TotalSize: 6,
+		}, {
+			Name:      "part2",
+			Types:     []string{"type3", "type4"},
+			TotalSize: 12,
+		}},
+		ErrorInfo: &cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"},
+	}
+
+	receivedNodInfo := pbconvert.NewNodeInfoFromPB(
+		&pbiam.NodeInfo{
+			NodeId:   "node1",
+			NodeType: "type1",
+			Name:     "name1",
+			Status:   "status1",
+			Cpus: []*pbiam.CPUInfo{
+				{ModelName: "model1", NumCores: 1, NumThreads: 2, Arch: "arch1", ArchFamily: "family1", MaxDmips: 3},
+				{ModelName: "model1", NumCores: 1, NumThreads: 2, Arch: "arch1", ArchFamily: "family1", MaxDmips: 3},
+			},
+			OsType:   "os1",
+			MaxDmips: 4,
+			TotalRam: 5,
+			Attrs: []*pbiam.NodeAttribute{
+				{Name: "attr1", Value: "value1"},
+				{Name: "attr2", Value: "value2"},
+			},
+			Partitions: []*pbiam.PartitionInfo{
+				{Name: "part1", Types: []string{"type1", "type2"}, TotalSize: 6},
+				{Name: "part2", Types: []string{"type3", "type4"}, TotalSize: 12},
+			},
+			Error: &pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"},
+		})
+
+	if !reflect.DeepEqual(expectedNodeInfo, receivedNodInfo) {
+		t.Error("Incorrect node info")
 	}
 }
