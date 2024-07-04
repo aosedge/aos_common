@@ -87,7 +87,7 @@ func TestInstanceFilter(t *testing.T) {
 			t.Error("Incorrect instance")
 		}
 
-		aosFilter := pbconvert.NewInstanceFilterFromPB(testItem.pbFilter)
+		aosFilter := pbconvert.InstanceFilterFromPB(testItem.pbFilter)
 
 		if !reflect.DeepEqual(aosFilter, testItem.aosFilter) {
 			t.Error("Incorrect instance")
@@ -109,7 +109,7 @@ func TestInstanceIdentToPB(t *testing.T) {
 func TestInstanceIdentFromPB(t *testing.T) {
 	expectedInstance := aostypes.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2}
 
-	receivedInstance := pbconvert.NewInstanceIdentFromPB(
+	receivedInstance := pbconvert.InstanceIdentFromPB(
 		&pbcommon.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2})
 
 	if expectedInstance != receivedInstance {
@@ -201,7 +201,7 @@ func TestErrorInfoToPB(t *testing.T) {
 func TestErrorInfoFromPB(t *testing.T) {
 	expectedErrorInfo := &cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"}
 
-	receivedErrorInfo := pbconvert.NewErrorInfoFromPB(
+	receivedErrorInfo := pbconvert.ErrorInfoFromPB(
 		&pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"})
 
 	if *expectedErrorInfo != *receivedErrorInfo {

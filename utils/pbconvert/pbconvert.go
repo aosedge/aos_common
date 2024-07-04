@@ -29,8 +29,8 @@ import (
  * Public
  **********************************************************************************************************************/
 
-// NewInstanceFilterFromPB converts InstanceFilter from protobuf to AOS type.
-func NewInstanceFilterFromPB(filter *pbsm.InstanceFilter) cloudprotocol.InstanceFilter {
+// InstanceFilterFromPB converts InstanceFilter from protobuf to AOS type.
+func InstanceFilterFromPB(filter *pbsm.InstanceFilter) cloudprotocol.InstanceFilter {
 	aosFilter := cloudprotocol.InstanceFilter{}
 
 	if filter.GetServiceId() != "" {
@@ -69,8 +69,8 @@ func InstanceFilterToPB(filter cloudprotocol.InstanceFilter) *pbsm.InstanceFilte
 	return ident
 }
 
-// NewInstanceIdentFromPB converts InstanceIdent from protobuf to AOS type.
-func NewInstanceIdentFromPB(ident *pbcommon.InstanceIdent) aostypes.InstanceIdent {
+// InstanceIdentFromPB converts InstanceIdent from protobuf to AOS type.
+func InstanceIdentFromPB(ident *pbcommon.InstanceIdent) aostypes.InstanceIdent {
 	return aostypes.InstanceIdent{
 		ServiceID: ident.GetServiceId(),
 		SubjectID: ident.GetSubjectId(),
@@ -83,8 +83,8 @@ func InstanceIdentToPB(ident aostypes.InstanceIdent) *pbcommon.InstanceIdent {
 	return &pbcommon.InstanceIdent{ServiceId: ident.ServiceID, SubjectId: ident.SubjectID, Instance: ident.Instance}
 }
 
-// NewErrorInfoFromPB converts ErrorInfo from protobuf to AOS type.
-func NewErrorInfoFromPB(errorInfo *pbcommon.ErrorInfo) *cloudprotocol.ErrorInfo {
+// ErrorInfoFromPB converts ErrorInfo from protobuf to AOS type.
+func ErrorInfoFromPB(errorInfo *pbcommon.ErrorInfo) *cloudprotocol.ErrorInfo {
 	if errorInfo == nil {
 		return nil
 	}
@@ -109,7 +109,7 @@ func ErrorInfoToPB(errorInfo *cloudprotocol.ErrorInfo) *pbcommon.ErrorInfo {
 	}
 }
 
-// NewNetworkParametersFromPB converts NetworkParameters from protobuf to AOS type.
+// NetworkParametersFromPB converts NetworkParameters from protobuf to AOS type.
 func NewNetworkParametersFromPB(params *pbsm.NetworkParameters) aostypes.NetworkParameters {
 	networkParams := aostypes.NetworkParameters{
 		IP:            params.GetIp(),
@@ -157,7 +157,7 @@ func NetworkParametersToPB(params aostypes.NetworkParameters) *pbsm.NetworkParam
 	return networkParams
 }
 
-// NewNodeInfoFromPB converts NodeInfo from protobuf to Aos type.
+// NodeInfoFromPB converts NodeInfo from protobuf to Aos type.
 func NewNodeInfoFromPB(pbNodeInfo *pbiam.NodeInfo) cloudprotocol.NodeInfo {
 	nodeInfo := cloudprotocol.NodeInfo{
 		NodeID:    pbNodeInfo.GetNodeId(),
@@ -167,7 +167,7 @@ func NewNodeInfoFromPB(pbNodeInfo *pbiam.NodeInfo) cloudprotocol.NodeInfo {
 		OSType:    pbNodeInfo.GetOsType(),
 		MaxDMIPs:  pbNodeInfo.GetMaxDmips(),
 		TotalRAM:  pbNodeInfo.GetTotalRam(),
-		ErrorInfo: NewErrorInfoFromPB(pbNodeInfo.GetError()),
+		ErrorInfo: ErrorInfoFromPB(pbNodeInfo.GetError()),
 	}
 
 	if pbNodeInfo.GetCpus() != nil {

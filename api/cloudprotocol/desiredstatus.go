@@ -213,6 +213,12 @@ func (layer LayerInfo) String() string {
 }
 
 func (component ComponentInfo) String() string {
+	id := "none"
+
+	if component.ComponentID != nil {
+		id = *component.ComponentID
+	}
+
 	return fmt.Sprintf("{id: %s, type: %s, annotations: %s, version: %s}",
-		component.ComponentID, component.ComponentType, component.Annotations, component.Version)
+		id, component.ComponentType, component.Annotations, component.Version)
 }
