@@ -137,7 +137,7 @@ type LayerInfo struct {
 
 // ComponentInfo decrypted component info.
 type ComponentInfo struct {
-	ComponentID   string          `json:"id"`
+	ComponentID   *string         `json:"id,omitempty"`
 	ComponentType string          `json:"type"`
 	Version       string          `json:"version"`
 	Annotations   json.RawMessage `json:"annotations,omitempty"`
