@@ -213,6 +213,33 @@ type ServiceConfig struct {
 	AlertRules         *AlertRules                  `json:"alertRules,omitempty"`
 }
 
+// PartitionUsage partition usage information.
+type PartitionUsage struct {
+	Name     string `json:"name"`
+	UsedSize uint64 `json:"usedSize"`
+}
+
+// MonitoringData monitoring data.
+type MonitoringData struct {
+	Timestamp  time.Time        `json:"timestamp"`
+	RAM        uint64           `json:"ram"`
+	CPU        uint64           `json:"cpu"`
+	InTraffic  uint64           `json:"inTraffic"`
+	OutTraffic uint64           `json:"outTraffic"`
+	Disk       []PartitionUsage `json:"disk"`
+}
+
+type InstanceMonitoring struct {
+	InstanceIdent
+	MonitoringData
+}
+
+type NodeMonitoring struct {
+	NodeID        string               `json:"nodeId"`
+	NodeData      MonitoringData       `json:"nodeData"`
+	InstancesData []InstanceMonitoring `json:"instancesData"`
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/

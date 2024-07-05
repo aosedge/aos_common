@@ -57,7 +57,7 @@ type testAlertsSender struct {
 }
 
 type testMonitoringSender struct {
-	monitoringData chan cloudprotocol.NodeMonitoringData
+	monitoringData chan aostypes.NodeMonitoring
 }
 
 type trafficMonitoringData struct {
@@ -79,7 +79,7 @@ type testUsageData struct {
 
 type testData struct {
 	alerts            []cloudprotocol.AlertItem
-	monitoringData    cloudprotocol.NodeMonitoringData
+	monitoringData    aostypes.NodeMonitoring
 	trafficMonitoring testTrafficMonitoring
 	usageData         testUsageData
 	monitoringConfig  ResourceMonitorParams
@@ -227,7 +227,7 @@ func TestSystemAlerts(t *testing.T) {
 	}
 
 	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData),
+		monitoringData: make(chan aostypes.NodeMonitoring),
 	}
 
 	systemCPUPercent = getSystemCPUPercent
@@ -241,11 +241,12 @@ func TestSystemAlerts(t *testing.T) {
 			trafficMonitoring: testTrafficMonitoring{
 				systemTraffic: trafficMonitoringData{inTraffic: 150, outTraffic: 150},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					RAM:        1100,
 					CPU:        3500,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 150,
 				},
@@ -260,11 +261,12 @@ func TestSystemAlerts(t *testing.T) {
 			trafficMonitoring: testTrafficMonitoring{
 				systemTraffic: trafficMonitoringData{inTraffic: 150, outTraffic: 250},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					RAM:        1100,
 					CPU:        4500,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 250,
 				},
@@ -283,11 +285,11 @@ func TestSystemAlerts(t *testing.T) {
 			trafficMonitoring: testTrafficMonitoring{
 				systemTraffic: trafficMonitoringData{inTraffic: 350, outTraffic: 250},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeData: aostypes.MonitoringData{
 					RAM:        2100,
 					CPU:        4500,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4300}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4300}},
 					InTraffic:  350,
 					OutTraffic: 250,
 				},
@@ -320,8 +322,10 @@ func TestSystemAlerts(t *testing.T) {
 
 		select {
 		case monitoringData := <-monitoringSender.monitoringData:
-			if !reflect.DeepEqual(monitoringData.MonitoringData, item.monitoringData.MonitoringData) {
-				t.Errorf("Incorrect system monitoring data: %v", monitoringData.MonitoringData)
+			monitoringData.NodeData.Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(monitoringData.NodeData, item.monitoringData.NodeData) {
+				t.Errorf("Incorrect system monitoring data: %v", monitoringData.NodeData)
 			}
 
 			for i := range alertSender.alerts {
@@ -356,7 +360,7 @@ func TestInstances(t *testing.T) {
 	}
 	alertSender := &testAlertsSender{}
 	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
+		monitoringData: make(chan aostypes.NodeMonitoring, 1),
 	}
 
 	testInstancesUsage := newTestInstancesUsage()
@@ -432,18 +436,18 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 1100,
 							CPU: 3500,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
 							InTraffic:  150,
@@ -507,18 +511,18 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.LayersPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service2",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 2100,
 							CPU: 2500,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.LayersPartition, UsedSize: 2300},
 							},
 							InTraffic:  250,
@@ -594,18 +598,18 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject2",
 							Instance:  2,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 2200,
 							CPU: 9000,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
 							InTraffic:  150,
@@ -686,18 +690,18 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.StatesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject2",
 							Instance:  2,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 2200,
 							CPU: 9000,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.StatesPartition, UsedSize: 2300},
 							},
 							InTraffic:  150,
@@ -747,14 +751,16 @@ func TestInstances(t *testing.T) {
 
 	select {
 	case monitoringData := <-monitoringSender.monitoringData:
-		if len(monitoringData.ServiceInstances) != len(testData) {
-			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.ServiceInstances))
+		if len(monitoringData.InstancesData) != len(testData) {
+			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
 
 	monitoringLoop:
-		for _, receivedMonitoring := range monitoringData.ServiceInstances {
+		for _, receivedMonitoring := range monitoringData.InstancesData {
 			for _, item := range testData {
-				if reflect.DeepEqual(item.monitoringData.ServiceInstances[0], receivedMonitoring) {
+				receivedMonitoring.MonitoringData.Timestamp = time.Time{}
+
+				if reflect.DeepEqual(item.monitoringData.InstancesData[0], receivedMonitoring) {
 					continue monitoringLoop
 				}
 			}
@@ -797,8 +803,8 @@ func TestInstances(t *testing.T) {
 	// and monitoring data is not received on them
 	select {
 	case monitoringData := <-monitoringSender.monitoringData:
-		if len(monitoringData.ServiceInstances) != 0 {
-			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.ServiceInstances))
+		if len(monitoringData.InstancesData) != 0 {
+			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
 
 	case <-time.After(duration * 2):
@@ -821,7 +827,7 @@ func TestSystemAveraging(t *testing.T) {
 	nodeConfigProvider := &testNodeConfigProvider{}
 
 	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
+		monitoringData: make(chan aostypes.NodeMonitoring, 1),
 	}
 	alertSender := &testAlertsSender{}
 	trafficMonitoring := &testTrafficMonitoring{}
@@ -841,11 +847,12 @@ func TestSystemAveraging(t *testing.T) {
 				systemTraffic: trafficMonitoringData{inTraffic: 100, outTraffic: 200},
 			},
 			usageData: testUsageData{cpu: 10, ram: 1000, disk: 2000},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					CPU:        1000,
 					RAM:        1000,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
 					InTraffic:  100,
 					OutTraffic: 200,
 				},
@@ -856,11 +863,12 @@ func TestSystemAveraging(t *testing.T) {
 				systemTraffic: trafficMonitoringData{inTraffic: 200, outTraffic: 300},
 			},
 			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					CPU:        1500,
 					RAM:        1500,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
 					InTraffic:  150,
 					OutTraffic: 250,
 				},
@@ -871,11 +879,12 @@ func TestSystemAveraging(t *testing.T) {
 				systemTraffic: trafficMonitoringData{inTraffic: 300, outTraffic: 400},
 			},
 			usageData: testUsageData{cpu: 30, ram: 3000, disk: 6000},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					CPU:        2000,
 					RAM:        2000,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
 					InTraffic:  200,
 					OutTraffic: 300,
 				},
@@ -886,11 +895,12 @@ func TestSystemAveraging(t *testing.T) {
 				systemTraffic: trafficMonitoringData{inTraffic: 500, outTraffic: 600},
 			},
 			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
 					CPU:        2000,
 					RAM:        2000,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
 					InTraffic:  300,
 					OutTraffic: 400,
 				},
@@ -916,7 +926,9 @@ func TestSystemAveraging(t *testing.T) {
 				t.Errorf("Can't get average monitoring data: %s", err)
 			}
 
-			if !reflect.DeepEqual(averageData.MonitoringData, item.monitoringData.MonitoringData) {
+			averageData.NodeData.Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(averageData.NodeData, item.monitoringData.NodeData) {
 				t.Errorf("Incorrect average monitoring data: %v", averageData)
 			}
 
@@ -942,7 +954,7 @@ func TestInstanceAveraging(t *testing.T) {
 	}
 	alertSender := &testAlertsSender{}
 	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData),
+		monitoringData: make(chan aostypes.NodeMonitoring),
 	}
 	testInstancesUsage := newTestInstancesUsage()
 
@@ -984,18 +996,18 @@ func TestInstanceAveraging(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 1000,
 							CPU: 1000,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2000},
 							},
 							InTraffic:  100,
@@ -1025,18 +1037,18 @@ func TestInstanceAveraging(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 1500,
 							CPU: 1500,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2500},
 							},
 							InTraffic:  150,
@@ -1066,18 +1078,18 @@ func TestInstanceAveraging(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 2000,
 							CPU: 2000,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
 							},
 							InTraffic:  200,
@@ -1107,18 +1119,18 @@ func TestInstanceAveraging(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				ServiceInstances: []cloudprotocol.InstanceMonitoringData{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
 					{
 						InstanceIdent: aostypes.InstanceIdent{
 							ServiceID: "service1",
 							SubjectID: "subject1",
 							Instance:  1,
 						},
-						MonitoringData: cloudprotocol.MonitoringData{
+						MonitoringData: aostypes.MonitoringData{
 							RAM: 2000,
 							CPU: 2000,
-							Disk: []cloudprotocol.PartitionUsage{
+							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
 							},
 							InTraffic:  200,
@@ -1148,9 +1160,11 @@ func TestInstanceAveraging(t *testing.T) {
 				t.Errorf("Can't get average monitoring data: %s", err)
 			}
 
-			if !reflect.DeepEqual(averageData.ServiceInstances[0].MonitoringData,
-				item.monitoringData.ServiceInstances[0].MonitoringData) {
-				t.Errorf("Incorrect average monitoring data: %v", averageData.ServiceInstances[0].MonitoringData)
+			averageData.InstancesData[0].Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(averageData.InstancesData[0].MonitoringData,
+				item.monitoringData.InstancesData[0].MonitoringData) {
+				t.Errorf("Incorrect average monitoring data: %v", averageData.InstancesData[0].MonitoringData)
 			}
 
 		case <-time.After(duration * 2):
@@ -1167,7 +1181,7 @@ func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
 	sender.alerts = append(sender.alerts, alert)
 }
 
-func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudprotocol.NodeMonitoringData) {
+func (sender *testMonitoringSender) SendMonitoringData(monitoringData aostypes.NodeMonitoring) {
 	sender.monitoringData <- monitoringData
 }
 
@@ -1240,8 +1254,8 @@ func (host *testInstancesUsage) FillSystemInfo(instanceID string, instance *inst
 		return aoserrors.Errorf("instance %s not found", instanceID)
 	}
 
-	instance.monitoringData.CPU = uint64(math.Round(data.cpu))
-	instance.monitoringData.RAM = data.ram
+	instance.monitoring.CPU = uint64(math.Round(data.cpu))
+	instance.monitoring.RAM = data.ram
 
 	return nil
 }
