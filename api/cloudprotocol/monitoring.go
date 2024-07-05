@@ -47,21 +47,21 @@ type MonitoringData struct {
 	InTraffic  uint64           `json:"inTraffic"`
 	OutTraffic uint64           `json:"outTraffic"`
 	Disk       []PartitionUsage `json:"disk"`
+	Timestamp  time.Time        `json:"timestamp"`
 }
 
 // NodeMonitoringData node monitoring data.
 type NodeMonitoringData struct {
 	MonitoringData
-	NodeID           string                   `json:"nodeId"`
-	Timestamp        time.Time                `json:"timestamp"`
-	ServiceInstances []InstanceMonitoringData `json:"serviceInstances"`
+	NodeID string           `json:"nodeId"`
+	Items  []MonitoringData `json:"items"`
 }
 
 // InstanceMonitoringData monitoring data for service.
 type InstanceMonitoringData struct {
 	aostypes.InstanceIdent
-	NodeID string `json:"nodeId"`
-	MonitoringData
+	NodeID string           `json:"nodeId"`
+	Items  []MonitoringData `json:"items"`
 }
 
 // Monitoring monitoring message structure.
