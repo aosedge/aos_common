@@ -51,9 +51,9 @@ const (
 // LogUploadOptions request log message.
 type LogUploadOptions struct {
 	Type           string     `json:"type"`
-	Url            string     `json:"url"`
+	URL            string     `json:"url"`
 	BearerToken    string     `json:"bearerToken"`
-	BearerTokenTTL *time.Time `json:"bearerTokenTTL"`
+	BearerTokenTTL *time.Time `json:"bearerTokenTtl"`
 }
 
 // LogFilter request log message.
