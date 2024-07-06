@@ -252,7 +252,7 @@ func TestNodeInfoFromPB(t *testing.T) {
 		ErrorInfo: &cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"},
 	}
 
-	receivedNodInfo := pbconvert.NewNodeInfoFromPB(
+	receivedNodInfo := pbconvert.NodeInfoFromPB(
 		&pbiam.NodeInfo{
 			NodeId:   "node1",
 			NodeType: "type1",
