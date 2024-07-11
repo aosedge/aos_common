@@ -1181,7 +1181,7 @@ func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
 	sender.alerts = append(sender.alerts, alert)
 }
 
-func (sender *testMonitoringSender) SendMonitoringData(monitoringData aostypes.NodeMonitoring) {
+func (sender *testMonitoringSender) SendNodeMonitoring(monitoringData aostypes.NodeMonitoring) {
 	sender.monitoringData <- monitoringData
 }
 
