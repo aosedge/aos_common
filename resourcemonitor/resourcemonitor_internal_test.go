@@ -56,10 +56,6 @@ type testAlertsSender struct {
 	alerts []cloudprotocol.AlertItem
 }
 
-type testMonitoringSender struct {
-	monitoringData chan aostypes.NodeMonitoring
-}
-
 type trafficMonitoringData struct {
 	inTraffic, outTraffic uint64
 }
@@ -226,10 +222,6 @@ func TestSystemAlerts(t *testing.T) {
 		},
 	}
 
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan aostypes.NodeMonitoring),
-	}
-
 	systemCPUPercent = getSystemCPUPercent
 	systemVirtualMemory = getSystemRAM
 	systemDiskUsage = getSystemDisk
@@ -315,13 +307,13 @@ func TestSystemAlerts(t *testing.T) {
 		systemUsageData = item.usageData
 
 		monitor, err := New(config, nodeInfoProvider, nodeConfigProvider,
-			&trafficMonitoring, alertSender, monitoringSender)
+			&trafficMonitoring, alertSender)
 		if err != nil {
 			t.Fatalf("Can't create monitoring instance: %s", err)
 		}
 
 		select {
-		case monitoringData := <-monitoringSender.monitoringData:
+		case monitoringData := <-monitor.GetNodeMonitoringChannel():
 			monitoringData.NodeData.Timestamp = time.Time{}
 
 			if !reflect.DeepEqual(monitoringData.NodeData, item.monitoringData.NodeData) {
@@ -359,10 +351,6 @@ func TestInstances(t *testing.T) {
 		instanceTraffic: make(map[string]trafficMonitoringData),
 	}
 	alertSender := &testAlertsSender{}
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan aostypes.NodeMonitoring, 1),
-	}
-
 	testInstancesUsage := newTestInstancesUsage()
 
 	instanceUsage = testInstancesUsage
@@ -373,7 +361,7 @@ func TestInstances(t *testing.T) {
 	monitor, err := New(Config{
 		PollPeriod: aostypes.Duration{Duration: duration},
 	},
-		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender, monitoringSender)
+		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender)
 	if err != nil {
 		t.Fatalf("Can't create monitoring instance: %s", err)
 	}
@@ -750,7 +738,7 @@ func TestInstances(t *testing.T) {
 	}
 
 	select {
-	case monitoringData := <-monitoringSender.monitoringData:
+	case monitoringData := <-monitor.GetNodeMonitoringChannel():
 		if len(monitoringData.InstancesData) != len(testData) {
 			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
@@ -802,7 +790,7 @@ func TestInstances(t *testing.T) {
 	// this select is used to make sure that the monitoring of the instances has been stopped
 	// and monitoring data is not received on them
 	select {
-	case monitoringData := <-monitoringSender.monitoringData:
+	case monitoringData := <-monitor.GetNodeMonitoringChannel():
 		if len(monitoringData.InstancesData) != 0 {
 			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
@@ -825,10 +813,6 @@ func TestSystemAveraging(t *testing.T) {
 	}
 
 	nodeConfigProvider := &testNodeConfigProvider{}
-
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan aostypes.NodeMonitoring, 1),
-	}
 	alertSender := &testAlertsSender{}
 	trafficMonitoring := &testTrafficMonitoring{}
 
@@ -909,7 +893,7 @@ func TestSystemAveraging(t *testing.T) {
 	}
 
 	monitor, err := New(config, nodeInfoProvider, nodeConfigProvider,
-		trafficMonitoring, alertSender, monitoringSender)
+		trafficMonitoring, alertSender)
 	if err != nil {
 		t.Fatalf("Can't create monitoring instance: %s", err)
 	}
@@ -920,7 +904,7 @@ func TestSystemAveraging(t *testing.T) {
 		systemUsageData = item.usageData
 
 		select {
-		case <-monitoringSender.monitoringData:
+		case <-monitor.GetNodeMonitoringChannel():
 			averageData, err := monitor.GetAverageMonitoring()
 			if err != nil {
 				t.Errorf("Can't get average monitoring data: %s", err)
@@ -953,9 +937,6 @@ func TestInstanceAveraging(t *testing.T) {
 		instanceTraffic: make(map[string]trafficMonitoringData),
 	}
 	alertSender := &testAlertsSender{}
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan aostypes.NodeMonitoring),
-	}
 	testInstancesUsage := newTestInstancesUsage()
 
 	instanceUsage = testInstancesUsage
@@ -967,7 +948,7 @@ func TestInstanceAveraging(t *testing.T) {
 		PollPeriod:    aostypes.Duration{Duration: duration},
 		AverageWindow: aostypes.Duration{Duration: duration * 3},
 	},
-		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender, monitoringSender)
+		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender)
 	if err != nil {
 		t.Fatalf("Can't create monitoring instance: %s", err)
 	}
@@ -1154,7 +1135,7 @@ func TestInstanceAveraging(t *testing.T) {
 		trafficMonitoring.instanceTraffic[item.instanceID] = item.trafficMonitoring.instanceTraffic[item.instanceID]
 
 		select {
-		case <-monitoringSender.monitoringData:
+		case <-monitor.GetNodeMonitoringChannel():
 			averageData, err := monitor.GetAverageMonitoring()
 			if err != nil {
 				t.Errorf("Can't get average monitoring data: %s", err)
@@ -1179,10 +1160,6 @@ func TestInstanceAveraging(t *testing.T) {
 
 func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
 	sender.alerts = append(sender.alerts, alert)
-}
-
-func (sender *testMonitoringSender) SendNodeMonitoring(monitoringData aostypes.NodeMonitoring) {
-	sender.monitoringData <- monitoringData
 }
 
 func (provider *testNodeInfoProvider) GetCurrentNodeInfo() (cloudprotocol.NodeInfo, error) {
