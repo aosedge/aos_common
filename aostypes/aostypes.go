@@ -189,9 +189,9 @@ type AlertRules struct {
 
 // ResourceRatiosInfo resource ratios info.
 type ResourceRatiosInfo struct {
-	CPU     float32 `json:"cpu"`
-	Mem     float32 `json:"mem"`
-	Storage float32 `json:"storage"`
+	CPU     *float32 `json:"cpu"`
+	RAM     *float32 `json:"ram"`
+	Storage *float32 `json:"storage"`
 }
 
 // ServiceConfig Aos service configuration.
