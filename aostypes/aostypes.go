@@ -168,8 +168,8 @@ type RunParameters struct {
 // AlertRuleParam describes alert rule.
 type AlertRuleParam struct {
 	Timeout Duration `json:"timeout"`
-	Low     uint64   `json:"low"`
-	High    uint64   `json:"high"`
+	Low     float64  `json:"low"`
+	High    float64  `json:"high"`
 }
 
 // PartitionAlertRuleParam describes alert rule.
@@ -189,9 +189,9 @@ type AlertRules struct {
 
 // ResourceRatiosInfo resource ratios info.
 type ResourceRatiosInfo struct {
-	CPU     *float32 `json:"cpu"`
-	RAM     *float32 `json:"ram"`
-	Storage *float32 `json:"storage"`
+	CPU     *float64 `json:"cpu"`
+	RAM     *float64 `json:"ram"`
+	Storage *float64 `json:"storage"`
 }
 
 // ServiceConfig Aos service configuration.
