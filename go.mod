@@ -15,6 +15,7 @@ require (
 	github.com/google/go-tpm v0.9.0
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.5.1
+	github.com/hashicorp/go-version v1.6.0
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.18
 	github.com/opencontainers/go-digest v1.0.0
@@ -23,6 +24,7 @@ require (
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
 	golang.org/x/crypto v0.21.0
+	golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.33.0
 )
@@ -32,7 +34,6 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
-	github.com/hashicorp/go-version v1.6.0 // indirect
 	github.com/miekg/pkcs11 v1.0.3-0.20190429190417-a667d056470f // indirect
 	github.com/moby/sys/mountinfo v0.7.1 // indirect
 	github.com/pkg/errors v0.9.1 // indirect

@@ -26,6 +26,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/exp/slices"
+
 	"github.com/aosedge/aos_common/aoserrors"
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
@@ -376,23 +378,21 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 	}
 
 	if nodeConfig.AlertRules.CPU != nil {
-		rules := *nodeConfig.AlertRules.CPU
-		rules.High = monitor.cpuToDMIPs(float64(rules.High))
-		rules.Low = monitor.cpuToDMIPs(float64(rules.Low))
-
-		monitor.alertProcessors.PushBack(createAlertProcessor(
+		monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			"System CPU",
 			&monitor.nodeMonitoring.CPU,
+			monitor.nodeInfo.MaxDMIPs,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "cpu", time, value, status))
 			},
-			rules))
+			*nodeConfig.AlertRules.CPU))
 	}
 
 	if nodeConfig.AlertRules.RAM != nil {
-		monitor.alertProcessors.PushBack(createAlertProcessor(
+		monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			"System RAM",
 			&monitor.nodeMonitoring.RAM,
+			monitor.nodeInfo.TotalRAM,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "ram", time, value, status))
 			},
@@ -400,55 +400,62 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 	}
 
 	for _, diskRule := range nodeConfig.AlertRules.UsedDisks {
-		diskUsageValue, findErr := getDiskUsageValue(monitor.nodeMonitoring.Disk, diskRule.Name)
+		diskUsageValue, diskTotalSize, findErr := getDiskUsageValue(
+			diskRule.Name, monitor.nodeMonitoring.Disk, monitor.nodeInfo.Partitions)
 		if findErr != nil && err == nil {
 			err = findErr
-
-			log.Errorf("Can't find disk: %s", diskRule.Name)
-
 			continue
 		}
 
-		monitor.alertProcessors.PushBack(createAlertProcessor(
+		monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			"Partition "+diskRule.Name,
 			diskUsageValue,
+			diskTotalSize,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, diskRule.Name, time, value, status))
 			},
-			diskRule.AlertRuleParam))
+			diskRule.AlertRulePercents))
 	}
 
-	if nodeConfig.AlertRules.InTraffic != nil {
-		monitor.alertProcessors.PushBack(createAlertProcessor(
-			"IN Traffic",
+	if nodeConfig.AlertRules.Download != nil {
+		monitor.alertProcessors.PushBack(createAlertProcessorPoints(
+			"Download traffic",
 			&monitor.nodeMonitoring.InTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "inTraffic", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "download", time, value, status))
 			},
-			*nodeConfig.AlertRules.InTraffic))
+			*nodeConfig.AlertRules.Download))
 	}
 
-	if nodeConfig.AlertRules.OutTraffic != nil {
-		monitor.alertProcessors.PushBack(createAlertProcessor(
-			"OUT Traffic",
+	if nodeConfig.AlertRules.Upload != nil {
+		monitor.alertProcessors.PushBack(createAlertProcessorPoints(
+			"Upload traffic",
 			&monitor.nodeMonitoring.OutTraffic,
 			func(time time.Time, value uint64, status string) {
-				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "outTraffic", time, value, status))
+				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "upload", time, value, status))
 			},
-			*nodeConfig.AlertRules.OutTraffic))
+			*nodeConfig.AlertRules.Upload))
 	}
 
 	return err
 }
 
-func getDiskUsageValue(disks []aostypes.PartitionUsage, name string) (*uint64, error) {
-	for i, disk := range disks {
-		if disk.Name == name {
-			return &disks[i].UsedSize, nil
-		}
+func getDiskUsageValue(
+	name string, disksUsage []aostypes.PartitionUsage, disksInfo []cloudprotocol.PartitionInfo,
+) (value *uint64, maxValue uint64, err error) {
+	valueIndex := slices.IndexFunc(disksUsage, func(disk aostypes.PartitionUsage) bool {
+		return disk.Name == name
+	})
+
+	maxValueIndex := slices.IndexFunc(disksInfo, func(disk cloudprotocol.PartitionInfo) bool {
+		return disk.Name == name
+	})
+
+	if valueIndex == -1 || maxValueIndex == -1 {
+		return nil, 0, aoserrors.Errorf("disk [%s] not found", name)
 	}
 
-	return nil, aoserrors.Errorf("can't find disk %s", name)
+	return &disksUsage[valueIndex].UsedSize, disksInfo[maxValueIndex].TotalSize, nil
 }
 
 func getDiskPath(disks []cloudprotocol.PartitionInfo, name string) (string, error) {
@@ -490,26 +497,24 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 	instanceMonitoring.alertProcessorElements = make([]*list.Element, 0)
 
 	if rules.CPU != nil {
-		rules := *rules.CPU
-		rules.High = monitor.cpuToDMIPs(float64(rules.High))
-		rules.Low = monitor.cpuToDMIPs(float64(rules.Low))
-
-		e := monitor.alertProcessors.PushBack(createAlertProcessor(
+		e := monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			instanceID+" CPU",
 			&instanceMonitoring.monitoring.CPU,
+			monitor.nodeInfo.MaxDMIPs,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoring.InstanceIdent, "cpu", time, value, status))
-			}, rules))
+			}, *rules.CPU))
 
 		instanceMonitoring.alertProcessorElements = append(instanceMonitoring.alertProcessorElements, e)
 	}
 
 	if rules.RAM != nil {
-		e := monitor.alertProcessors.PushBack(createAlertProcessor(
+		e := monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			instanceID+" RAM",
 			&instanceMonitoring.monitoring.RAM,
+			monitor.nodeInfo.TotalRAM,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
@@ -520,49 +525,48 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 	}
 
 	for _, diskRule := range rules.UsedDisks {
-		diskUsageValue, findErr := getDiskUsageValue(instanceMonitoring.monitoring.Disk, diskRule.Name)
+		diskUsageValue, diskTotalSize, findErr := getDiskUsageValue(
+			diskRule.Name, instanceMonitoring.monitoring.Disk, monitor.nodeInfo.Partitions)
 		if findErr != nil && err == nil {
-			log.Errorf("Can't find disk: %s", diskRule.Name)
-
 			err = findErr
-
 			continue
 		}
 
-		e := monitor.alertProcessors.PushBack(createAlertProcessor(
+		e := monitor.alertProcessors.PushBack(createAlertProcessorPercents(
 			instanceID+" Partition "+diskRule.Name,
 			diskUsageValue,
+			diskTotalSize,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
 						instanceMonitoring.monitoring.InstanceIdent, diskRule.Name, time, value, status))
-			}, diskRule.AlertRuleParam))
+			}, diskRule.AlertRulePercents))
 
 		instanceMonitoring.alertProcessorElements = append(instanceMonitoring.alertProcessorElements, e)
 	}
 
-	if rules.InTraffic != nil {
-		e := monitor.alertProcessors.PushBack(createAlertProcessor(
-			instanceID+" Traffic IN",
+	if rules.Download != nil {
+		e := monitor.alertProcessors.PushBack(createAlertProcessorPoints(
+			instanceID+" download traffic",
 			&instanceMonitoring.monitoring.InTraffic,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
-						instanceMonitoring.monitoring.InstanceIdent, "inTraffic", time, value, status))
-			}, *rules.InTraffic))
+						instanceMonitoring.monitoring.InstanceIdent, "download", time, value, status))
+			}, *rules.Download))
 
 		instanceMonitoring.alertProcessorElements = append(instanceMonitoring.alertProcessorElements, e)
 	}
 
-	if rules.OutTraffic != nil {
-		e := monitor.alertProcessors.PushBack(createAlertProcessor(
-			instanceID+" Traffic OUT",
+	if rules.Upload != nil {
+		e := monitor.alertProcessors.PushBack(createAlertProcessorPoints(
+			instanceID+" upload traffic",
 			&instanceMonitoring.monitoring.OutTraffic,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
-						instanceMonitoring.monitoring.InstanceIdent, "outTraffic", time, value, status))
-			}, *rules.OutTraffic))
+						instanceMonitoring.monitoring.InstanceIdent, "upload", time, value, status))
+			}, *rules.Upload))
 
 		instanceMonitoring.alertProcessorElements = append(instanceMonitoring.alertProcessorElements, e)
 	}

@@ -58,7 +58,7 @@ type testAlertsSender struct {
 }
 
 type trafficMonitoringData struct {
-	inTraffic, outTraffic uint64
+	download, upload uint64
 }
 
 type testTrafficMonitoring struct {
@@ -133,16 +133,16 @@ func TestAlertProcessor(t *testing.T) {
 		receivedAlerts []AlertItem
 	)
 
-	alert := createAlertProcessor(
+	alert := createAlertProcessorPoints(
 		"Test",
 		&sourceValue,
 		func(time time.Time, value uint64, status string) {
 			receivedAlerts = append(receivedAlerts, AlertItem{time, value, status})
 		},
-		aostypes.AlertRuleParam{
-			Timeout: aostypes.Duration{Duration: 3 * time.Second},
-			Low:     80,
-			High:    90,
+		aostypes.AlertRulePoints{
+			MinTimeout:   aostypes.Duration{Duration: 3 * time.Second},
+			MinThreshold: 80,
+			MaxThreshold: 90,
 		})
 
 	values := []uint64{
@@ -179,45 +179,48 @@ func TestSystemAlerts(t *testing.T) {
 
 	nodeInfoProvider := &testNodeInfoProvider{
 		nodeInfo: cloudprotocol.NodeInfo{
-			NodeID:     "testNode",
-			NodeType:   "testNode",
-			Partitions: []cloudprotocol.PartitionInfo{{Name: cloudprotocol.GenericPartition, Path: "."}},
-			MaxDMIPs:   10000,
+			NodeID:   "testNode",
+			NodeType: "testNode",
+			MaxDMIPs: 10000,
+			TotalRAM: 10000,
+			Partitions: []cloudprotocol.PartitionInfo{
+				{Name: cloudprotocol.GenericPartition, Path: ".", TotalSize: 10000},
+			},
 		},
 	}
 
 	nodeConfigProvider := &testNodeConfigProvider{
 		nodeConfig: cloudprotocol.NodeConfig{
 			AlertRules: &aostypes.AlertRules{
-				CPU: &aostypes.AlertRuleParam{
-					Timeout: aostypes.Duration{},
-					Low:     30,
-					High:    40,
+				CPU: &aostypes.AlertRulePercents{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 80,
+					MaxThreshold: 90,
 				},
-				RAM: &aostypes.AlertRuleParam{
-					Timeout: aostypes.Duration{},
-					Low:     1000,
-					High:    2000,
+				RAM: &aostypes.AlertRulePercents{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 80,
+					MaxThreshold: 90,
 				},
-				UsedDisks: []aostypes.PartitionAlertRuleParam{
+				UsedDisks: []aostypes.PartitionAlertRule{
 					{
-						AlertRuleParam: aostypes.AlertRuleParam{
-							Timeout: aostypes.Duration{},
-							Low:     2000,
-							High:    4000,
+						AlertRulePercents: aostypes.AlertRulePercents{
+							MinTimeout:   aostypes.Duration{},
+							MinThreshold: 80,
+							MaxThreshold: 90,
 						},
 						Name: cloudprotocol.GenericPartition,
 					},
 				},
-				InTraffic: &aostypes.AlertRuleParam{
-					Timeout: aostypes.Duration{},
-					Low:     100,
-					High:    200,
+				Download: &aostypes.AlertRulePoints{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 100,
+					MaxThreshold: 200,
 				},
-				OutTraffic: &aostypes.AlertRuleParam{
-					Timeout: aostypes.Duration{},
-					Low:     100,
-					High:    200,
+				Upload: &aostypes.AlertRulePoints{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 100,
+					MaxThreshold: 200,
 				},
 			},
 		},
@@ -234,13 +237,13 @@ func TestSystemAlerts(t *testing.T) {
 	testData := []testData{
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 150, outTraffic: 150},
+				systemTraffic: trafficMonitoringData{download: 150, upload: 150},
 			},
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					RAM:        1100,
 					CPU:        3500,
+					RAM:        1100,
 					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 150,
@@ -254,57 +257,59 @@ func TestSystemAlerts(t *testing.T) {
 		},
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 150, outTraffic: 250},
+				systemTraffic: trafficMonitoringData{download: 150, upload: 250},
 			},
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
 					RAM:        1100,
-					CPU:        4500,
+					CPU:        10000,
 					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
 					InTraffic:  150,
 					OutTraffic: 250,
 				},
 			},
 			usageData: testUsageData{
-				cpu:  45,
+				cpu:  100,
 				ram:  1100,
 				disk: 2300,
 			},
 			alerts: []interface{}{
-				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 4500, "raise"),
-				prepareSystemAlertItem(nodeID, "outTraffic", time.Time{}, 250, "raise"),
+				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 350, outTraffic: 250},
+				systemTraffic: trafficMonitoringData{download: 350, upload: 250},
 			},
 			monitoringData: aostypes.NodeMonitoring{
 				NodeData: aostypes.MonitoringData{
-					RAM:        2100,
-					CPU:        4500,
-					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4300}},
+					CPU:        10000,
+					RAM:        10000,
+					Disk:       []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 10000}},
 					InTraffic:  350,
 					OutTraffic: 250,
 				},
 			},
 			usageData: testUsageData{
-				cpu:  45,
-				ram:  2100,
-				disk: 4300,
+				cpu:  100,
+				ram:  10000,
+				disk: 10000,
 			},
 			alerts: []interface{}{
-				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 4500, "raise"),
-				prepareSystemAlertItem(nodeID, "ram", time.Time{}, 2100, "raise"),
-				prepareSystemAlertItem(nodeID, "generic", time.Time{}, 4300, "raise"),
-				prepareSystemAlertItem(nodeID, "inTraffic", time.Time{}, 350, "raise"),
-				prepareSystemAlertItem(nodeID, "outTraffic", time.Time{}, 250, "raise"),
+				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "ram", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "generic", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "download", time.Time{}, 350, "raise"),
+				prepareSystemAlertItem(nodeID, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 	}
 
-	for _, item := range testData {
+	for i, item := range testData {
+		t.Logf("Test case: %d", i)
+
 		alertSender := &testAlertsSender{}
 		trafficMonitoring := item.trafficMonitoring
 		systemUsageData = item.usageData
@@ -343,6 +348,12 @@ func TestInstances(t *testing.T) {
 			NodeID:   "testNode",
 			NodeType: "testNode",
 			MaxDMIPs: 10000,
+			TotalRAM: 10000,
+			Partitions: []cloudprotocol.PartitionInfo{
+				{Name: cloudprotocol.ServicesPartition, Path: ".", TotalSize: 10000},
+				{Name: cloudprotocol.LayersPartition, Path: ".", TotalSize: 10000},
+				{Name: cloudprotocol.StatesPartition, Path: ".", TotalSize: 10000},
+			},
 		},
 	}
 	nodeConfigProvider := &testNodeConfigProvider{}
@@ -373,7 +384,7 @@ func TestInstances(t *testing.T) {
 			instanceID: "instance0",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance0": {inTraffic: 150, outTraffic: 150},
+					"instance0": {download: 150, upload: 150},
 				},
 			},
 			usageData: testUsageData{
@@ -390,35 +401,35 @@ func TestInstances(t *testing.T) {
 				UID: 5000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     30,
-						High:    40,
+					CPU: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     1000,
-						High:    2000,
+					RAM: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
-								Timeout: aostypes.Duration{},
-								Low:     2000,
-								High:    3000,
+							AlertRulePercents: aostypes.AlertRulePercents{
+								MinTimeout:   aostypes.Duration{},
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Download: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Upload: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
@@ -448,12 +459,12 @@ func TestInstances(t *testing.T) {
 			instanceID: "instance1",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance1": {inTraffic: 250, outTraffic: 150},
+					"instance1": {download: 250, upload: 150},
 				},
 			},
 			usageData: testUsageData{
 				cpu:  25,
-				ram:  2100,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -465,35 +476,35 @@ func TestInstances(t *testing.T) {
 				UID: 3000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     30,
-						High:    40,
+					CPU: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     1000,
-						High:    2000,
+					RAM: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
-								Timeout: aostypes.Duration{},
-								Low:     2000,
-								High:    3000,
+							AlertRulePercents: aostypes.AlertRulePercents{
+								MinTimeout:   aostypes.Duration{},
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.LayersPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Download: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Upload: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.LayersPartition, Path: "."}},
@@ -507,8 +518,8 @@ func TestInstances(t *testing.T) {
 							Instance:  1,
 						},
 						MonitoringData: aostypes.MonitoringData{
-							RAM: 2100,
 							CPU: 2500,
+							RAM: 9000,
 							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.LayersPartition, UsedSize: 2300},
 							},
@@ -523,24 +534,24 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
-				}, "ram", time.Time{}, 2100, "raise"),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
-				}, "inTraffic", time.Time{}, 250, "raise"),
+				}, "download", time.Time{}, 250, "raise"),
 			},
 		},
 		{
 			instanceID: "instance2",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance2": {inTraffic: 150, outTraffic: 250},
+					"instance2": {download: 150, upload: 250},
 				},
 			},
 			usageData: testUsageData{
 				cpu:  90,
-				ram:  2200,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -552,35 +563,35 @@ func TestInstances(t *testing.T) {
 				UID: 2000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     30,
-						High:    40,
+					CPU: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     1000,
-						High:    2000,
+					RAM: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
-								Timeout: aostypes.Duration{},
-								Low:     2000,
-								High:    3000,
+							AlertRulePercents: aostypes.AlertRulePercents{
+								MinTimeout:   aostypes.Duration{},
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Download: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Upload: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
@@ -594,8 +605,8 @@ func TestInstances(t *testing.T) {
 							Instance:  2,
 						},
 						MonitoringData: aostypes.MonitoringData{
-							RAM: 2200,
 							CPU: 9000,
+							RAM: 9000,
 							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
@@ -610,7 +621,7 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "ram", time.Time{}, 2200, "raise"),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
@@ -620,19 +631,19 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "outTraffic", time.Time{}, 250, "raise"),
+				}, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 		{
 			instanceID: "instance3",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance3": {inTraffic: 150, outTraffic: 250},
+					"instance3": {download: 150, upload: 250},
 				},
 			},
 			usageData: testUsageData{
 				cpu:  90,
-				ram:  2200,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -644,35 +655,35 @@ func TestInstances(t *testing.T) {
 				UID: 2000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     30,
-						High:    40,
+					CPU: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     1000,
-						High:    2000,
+					RAM: &aostypes.AlertRulePercents{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
-								Timeout: aostypes.Duration{},
-								Low:     2000,
-								High:    3000,
+							AlertRulePercents: aostypes.AlertRulePercents{
+								MinTimeout:   aostypes.Duration{},
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.StatesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Download: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
-						Timeout: aostypes.Duration{},
-						Low:     100,
-						High:    200,
+					Upload: &aostypes.AlertRulePoints{
+						MinTimeout:   aostypes.Duration{},
+						MinThreshold: 100,
+						MaxThreshold: 200,
 					},
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.StatesPartition, Path: "."}},
@@ -686,8 +697,8 @@ func TestInstances(t *testing.T) {
 							Instance:  2,
 						},
 						MonitoringData: aostypes.MonitoringData{
-							RAM: 2200,
 							CPU: 9000,
+							RAM: 9000,
 							Disk: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.StatesPartition, UsedSize: 2300},
 							},
@@ -702,7 +713,7 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "ram", time.Time{}, 2200, "raise"),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
@@ -712,7 +723,7 @@ func TestInstances(t *testing.T) {
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "outTraffic", time.Time{}, 250, "raise"),
+				}, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 	}
@@ -721,7 +732,9 @@ func TestInstances(t *testing.T) {
 
 	processesData = make(map[int32]testUsageData)
 
-	for _, item := range testData {
+	for i, item := range testData {
+		t.Logf("Test case: %d", i)
+
 		testInstancesUsage.instances[item.instanceID] = testUsageData{
 			cpu: item.usageData.cpu, ram: item.usageData.ram,
 		}
@@ -760,7 +773,7 @@ func TestInstances(t *testing.T) {
 	}
 
 	if len(alertSender.alerts) != expectedInstanceAlertCount {
-		t.Fatalf("Incorrect alerts number: %d", len(alertSender.alerts))
+		t.Fatalf("Incorrect alerts number: %d != %d", len(alertSender.alerts), expectedInstanceAlertCount)
 	}
 
 	for i, item := range testData {
@@ -825,7 +838,7 @@ func TestSystemAveraging(t *testing.T) {
 	testData := []testData{
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 100, outTraffic: 200},
+				systemTraffic: trafficMonitoringData{download: 100, upload: 200},
 			},
 			usageData: testUsageData{cpu: 10, ram: 1000, disk: 2000},
 			monitoringData: aostypes.NodeMonitoring{
@@ -841,7 +854,7 @@ func TestSystemAveraging(t *testing.T) {
 		},
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 200, outTraffic: 300},
+				systemTraffic: trafficMonitoringData{download: 200, upload: 300},
 			},
 			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
 			monitoringData: aostypes.NodeMonitoring{
@@ -857,7 +870,7 @@ func TestSystemAveraging(t *testing.T) {
 		},
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 300, outTraffic: 400},
+				systemTraffic: trafficMonitoringData{download: 300, upload: 400},
 			},
 			usageData: testUsageData{cpu: 30, ram: 3000, disk: 6000},
 			monitoringData: aostypes.NodeMonitoring{
@@ -873,7 +886,7 @@ func TestSystemAveraging(t *testing.T) {
 		},
 		{
 			trafficMonitoring: testTrafficMonitoring{
-				systemTraffic: trafficMonitoringData{inTraffic: 500, outTraffic: 600},
+				systemTraffic: trafficMonitoringData{download: 500, upload: 600},
 			},
 			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
 			monitoringData: aostypes.NodeMonitoring{
@@ -958,7 +971,7 @@ func TestInstanceAveraging(t *testing.T) {
 			instanceID: "instance0",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance0": {inTraffic: 100, outTraffic: 100},
+					"instance0": {download: 100, upload: 100},
 				},
 			},
 			usageData: testUsageData{
@@ -999,7 +1012,7 @@ func TestInstanceAveraging(t *testing.T) {
 			instanceID: "instance0",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance0": {inTraffic: 200, outTraffic: 200},
+					"instance0": {download: 200, upload: 200},
 				},
 			},
 			usageData: testUsageData{
@@ -1040,7 +1053,7 @@ func TestInstanceAveraging(t *testing.T) {
 			instanceID: "instance0",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance0": {inTraffic: 300, outTraffic: 300},
+					"instance0": {download: 300, upload: 300},
 				},
 			},
 			usageData: testUsageData{
@@ -1081,7 +1094,7 @@ func TestInstanceAveraging(t *testing.T) {
 			instanceID: "instance0",
 			trafficMonitoring: testTrafficMonitoring{
 				instanceTraffic: map[string]trafficMonitoringData{
-					"instance0": {inTraffic: 200, outTraffic: 200},
+					"instance0": {download: 200, upload: 200},
 				},
 			},
 			usageData: testUsageData{
@@ -1180,7 +1193,7 @@ func (provider *testNodeConfigProvider) CurrentNodeConfigChannel() <-chan cloudp
  **********************************************************************************************************************/
 
 func (trafficMonitoring *testTrafficMonitoring) GetSystemTraffic() (inputTraffic, outputTraffic uint64, err error) {
-	return trafficMonitoring.systemTraffic.inTraffic, trafficMonitoring.systemTraffic.outTraffic, nil
+	return trafficMonitoring.systemTraffic.download, trafficMonitoring.systemTraffic.upload, nil
 }
 
 func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID string) (
@@ -1191,7 +1204,7 @@ func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID st
 		return 0, 0, aoserrors.New("incorrect instance ID")
 	}
 
-	return trafficMonitoringData.inTraffic, trafficMonitoringData.outTraffic, nil
+	return trafficMonitoringData.download, trafficMonitoringData.upload, nil
 }
 
 func getSystemCPUPercent(interval time.Duration, percpu bool) (percent []float64, err error) {
