@@ -148,11 +148,11 @@ type instanceMonitoring struct {
 }
 
 type averageMonitoring struct {
-	ram        *averageCalc
-	cpu        *averageCalc
-	inTraffic  *averageCalc
-	outTraffic *averageCalc
-	disks      map[string]*averageCalc
+	ram      *averageCalc
+	cpu      *averageCalc
+	download *averageCalc
+	upload   *averageCalc
+	disks    map[string]*averageCalc
 }
 
 /***********************************************************************************************************************
@@ -420,7 +420,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 	if nodeConfig.AlertRules.Download != nil {
 		monitor.alertProcessors.PushBack(createAlertProcessorPoints(
 			"Download traffic",
-			&monitor.nodeMonitoring.InTraffic,
+			&monitor.nodeMonitoring.Download,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "download", time, value, status))
 			},
@@ -430,7 +430,7 @@ func (monitor *ResourceMonitor) setupSystemAlerts(nodeConfig cloudprotocol.NodeC
 	if nodeConfig.AlertRules.Upload != nil {
 		monitor.alertProcessors.PushBack(createAlertProcessorPoints(
 			"Upload traffic",
-			&monitor.nodeMonitoring.OutTraffic,
+			&monitor.nodeMonitoring.Upload,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(prepareSystemAlertItem(nodeID, "upload", time, value, status))
 			},
@@ -548,7 +548,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 	if rules.Download != nil {
 		e := monitor.alertProcessors.PushBack(createAlertProcessorPoints(
 			instanceID+" download traffic",
-			&instanceMonitoring.monitoring.InTraffic,
+			&instanceMonitoring.monitoring.Download,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
@@ -561,7 +561,7 @@ func (monitor *ResourceMonitor) setupInstanceAlerts(instanceID string, instanceM
 	if rules.Upload != nil {
 		e := monitor.alertProcessors.PushBack(createAlertProcessorPoints(
 			instanceID+" upload traffic",
-			&instanceMonitoring.monitoring.OutTraffic,
+			&instanceMonitoring.monitoring.Upload,
 			func(time time.Time, value uint64, status string) {
 				monitor.alertSender.SendAlert(
 					prepareInstanceAlertItem(
@@ -619,23 +619,23 @@ func (monitor *ResourceMonitor) getCurrentSystemData() {
 	}
 
 	if monitor.trafficMonitoring != nil {
-		inTraffic, outTraffic, err := monitor.trafficMonitoring.GetSystemTraffic()
+		download, upload, err := monitor.trafficMonitoring.GetSystemTraffic()
 		if err != nil {
 			log.Errorf("Can't get system traffic value: %s", err)
 		}
 
-		monitor.nodeMonitoring.InTraffic = inTraffic
-		monitor.nodeMonitoring.OutTraffic = outTraffic
+		monitor.nodeMonitoring.Download = download
+		monitor.nodeMonitoring.Upload = upload
 	}
 
 	monitor.nodeAverageData.updateMonitoringData(monitor.nodeMonitoring)
 
 	log.WithFields(log.Fields{
-		"CPU":  monitor.nodeMonitoring.CPU,
-		"RAM":  monitor.nodeMonitoring.RAM,
-		"Disk": monitor.nodeMonitoring.Disk,
-		"IN":   monitor.nodeMonitoring.InTraffic,
-		"OUT":  monitor.nodeMonitoring.OutTraffic,
+		"CPU":      monitor.nodeMonitoring.CPU,
+		"RAM":      monitor.nodeMonitoring.RAM,
+		"Disk":     monitor.nodeMonitoring.Disk,
+		"Download": monitor.nodeMonitoring.Download,
+		"Upload":   monitor.nodeMonitoring.Upload,
 	}).Debug("Monitoring data")
 }
 
@@ -660,24 +660,24 @@ func (monitor *ResourceMonitor) getCurrentInstancesData() {
 		}
 
 		if monitor.trafficMonitoring != nil {
-			inTraffic, outTraffic, err := monitor.trafficMonitoring.GetInstanceTraffic(instanceID)
+			download, upload, err := monitor.trafficMonitoring.GetInstanceTraffic(instanceID)
 			if err != nil {
 				log.Errorf("Can't get service traffic: %s", err)
 			}
 
-			value.monitoring.InTraffic = inTraffic
-			value.monitoring.OutTraffic = outTraffic
+			value.monitoring.Download = download
+			value.monitoring.Upload = upload
 		}
 
 		value.averageData.updateMonitoringData(value.monitoring.MonitoringData)
 
 		log.WithFields(log.Fields{
-			"id":   instanceID,
-			"CPU":  value.monitoring.CPU,
-			"RAM":  value.monitoring.RAM,
-			"Disk": value.monitoring.Disk,
-			"IN":   value.monitoring.InTraffic,
-			"OUT":  value.monitoring.OutTraffic,
+			"id":       instanceID,
+			"CPU":      value.monitoring.CPU,
+			"RAM":      value.monitoring.RAM,
+			"Disk":     value.monitoring.Disk,
+			"Download": value.monitoring.Download,
+			"Upload":   value.monitoring.Upload,
 		}).Debug("Instance monitoring data")
 	}
 }
@@ -779,11 +779,11 @@ func (monitor *ResourceMonitor) cpuToDMIPs(cpu float64) uint64 {
 
 func newAverageMonitoring(windowCount uint64, partitions []aostypes.PartitionUsage) *averageMonitoring {
 	averageMonitoring := &averageMonitoring{
-		ram:        newAverageCalc(windowCount),
-		cpu:        newAverageCalc(windowCount),
-		inTraffic:  newAverageCalc(windowCount),
-		outTraffic: newAverageCalc(windowCount),
-		disks:      make(map[string]*averageCalc),
+		ram:      newAverageCalc(windowCount),
+		cpu:      newAverageCalc(windowCount),
+		download: newAverageCalc(windowCount),
+		upload:   newAverageCalc(windowCount),
+		disks:    make(map[string]*averageCalc),
 	}
 
 	for _, partition := range partitions {
@@ -795,12 +795,12 @@ func newAverageMonitoring(windowCount uint64, partitions []aostypes.PartitionUsa
 
 func (average *averageMonitoring) toMonitoringData(timestamp time.Time) aostypes.MonitoringData {
 	data := aostypes.MonitoringData{
-		CPU:        average.cpu.getIntValue(),
-		RAM:        average.ram.getIntValue(),
-		InTraffic:  average.inTraffic.getIntValue(),
-		OutTraffic: average.outTraffic.getIntValue(),
-		Disk:       make([]aostypes.PartitionUsage, 0, len(average.disks)),
-		Timestamp:  timestamp,
+		CPU:       average.cpu.getIntValue(),
+		RAM:       average.ram.getIntValue(),
+		Download:  average.download.getIntValue(),
+		Upload:    average.upload.getIntValue(),
+		Disk:      make([]aostypes.PartitionUsage, 0, len(average.disks)),
+		Timestamp: timestamp,
 	}
 
 	for name, diskUsage := range average.disks {
@@ -815,8 +815,8 @@ func (average *averageMonitoring) toMonitoringData(timestamp time.Time) aostypes
 func (average *averageMonitoring) updateMonitoringData(data aostypes.MonitoringData) {
 	average.cpu.calculate(float64(data.CPU))
 	average.ram.calculate(float64(data.RAM))
-	average.inTraffic.calculate(float64(data.InTraffic))
-	average.outTraffic.calculate(float64(data.OutTraffic))
+	average.download.calculate(float64(data.Download))
+	average.upload.calculate(float64(data.Upload))
 
 	for _, disk := range data.Disk {
 		averageCalc, ok := average.disks[disk.Name]
