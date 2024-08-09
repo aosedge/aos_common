@@ -98,12 +98,12 @@ type UnitConfigStatus struct {
 
 // CPUInfo cpu information.
 type CPUInfo struct {
-	ModelName  string `json:"modelName"`
-	NumCores   uint64 `json:"totalNumCores"`
-	NumThreads uint64 `json:"totalNumThreads"`
-	Arch       string `json:"arch"`
-	ArchFamily string `json:"archFamily"`
-	MaxDMIPs   uint64 `json:"maxDmips"`
+	ModelName  *string `json:"modelName,omitempty"`
+	NumCores   *uint64 `json:"totalNumCores,omitempty"`
+	NumThreads *uint64 `json:"totalNumThreads,omitempty"`
+	Arch       string  `json:"arch"`
+	ArchFamily *string `json:"archFamily,omitempty"`
+	MaxDMIPs   *uint64 `json:"maxDmips,omitempty"`
 }
 
 // PartitionInfo partition information.
