@@ -24,7 +24,10 @@ import (
 
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
-	pb "github.com/aosedge/aos_common/api/servicemanager/v3"
+	pbcommon "github.com/aosedge/aos_common/api/common"
+	pbiam "github.com/aosedge/aos_common/api/iamanager"
+	pbsm "github.com/aosedge/aos_common/api/servicemanager"
+
 	"github.com/aosedge/aos_common/utils/pbconvert"
 	log "github.com/sirupsen/logrus"
 	"google.golang.org/protobuf/proto"
@@ -48,51 +51,57 @@ func init() {
  * Tests
  **********************************************************************************************************************/
 
-func TestInstanceFilterToPB(t *testing.T) {
+func TestInstanceFilter(t *testing.T) {
 	type testFilter struct {
-		expectedIdent *pb.InstanceIdent
-		filter        cloudprotocol.InstanceFilter
+		pbFilter  *pbsm.InstanceFilter
+		aosFilter cloudprotocol.InstanceFilter
 	}
 
 	testData := []testFilter{
 		{
-			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 1},
-			filter:        cloudprotocol.NewInstanceFilter("s1", "subj1", 1),
+			pbFilter:  &pbsm.InstanceFilter{ServiceId: "s1", SubjectId: "subj1", Instance: 1},
+			aosFilter: cloudprotocol.NewInstanceFilter("s1", "subj1", 1),
 		},
 		{
-			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "", Instance: 1},
-			filter:        cloudprotocol.NewInstanceFilter("s1", "", 1),
+			pbFilter:  &pbsm.InstanceFilter{ServiceId: "s1", SubjectId: "", Instance: 1},
+			aosFilter: cloudprotocol.NewInstanceFilter("s1", "", 1),
 		},
 		{
-			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: -1},
-			filter:        cloudprotocol.NewInstanceFilter("s1", "subj1", -1),
+			pbFilter:  &pbsm.InstanceFilter{ServiceId: "s1", SubjectId: "subj1", Instance: -1},
+			aosFilter: cloudprotocol.NewInstanceFilter("s1", "subj1", -1),
 		},
 		{
-			expectedIdent: &pb.InstanceIdent{ServiceId: "s1", SubjectId: "", Instance: -1},
-			filter:        cloudprotocol.NewInstanceFilter("s1", "", -1),
+			pbFilter:  &pbsm.InstanceFilter{ServiceId: "s1", SubjectId: "", Instance: -1},
+			aosFilter: cloudprotocol.NewInstanceFilter("s1", "", -1),
 		},
 		{
-			expectedIdent: &pb.InstanceIdent{ServiceId: "", SubjectId: "", Instance: -1},
-			filter:        cloudprotocol.NewInstanceFilter("", "", -1),
+			pbFilter:  &pbsm.InstanceFilter{ServiceId: "", SubjectId: "", Instance: -1},
+			aosFilter: cloudprotocol.NewInstanceFilter("", "", -1),
 		},
 	}
 
 	for _, testItem := range testData {
-		instance := pbconvert.InstanceFilterToPB(testItem.filter)
+		pbFilter := pbconvert.InstanceFilterToPB(testItem.aosFilter)
 
-		if !proto.Equal(instance, testItem.expectedIdent) {
+		if !proto.Equal(pbFilter, testItem.pbFilter) {
+			t.Error("Incorrect instance")
+		}
+
+		aosFilter := pbconvert.InstanceFilterFromPB(testItem.pbFilter)
+
+		if !reflect.DeepEqual(aosFilter, testItem.aosFilter) {
 			t.Error("Incorrect instance")
 		}
 	}
 }
 
 func TestInstanceIdentToPB(t *testing.T) {
-	expectdInstance := &pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2}
+	expectedInstance := &pbcommon.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2}
 
 	pbInstance := pbconvert.InstanceIdentToPB(
 		aostypes.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2})
 
-	if !proto.Equal(pbInstance, expectdInstance) {
+	if !proto.Equal(pbInstance, expectedInstance) {
 		t.Error("Incorrect instance")
 	}
 }
@@ -100,8 +109,8 @@ func TestInstanceIdentToPB(t *testing.T) {
 func TestInstanceIdentFromPB(t *testing.T) {
 	expectedInstance := aostypes.InstanceIdent{ServiceID: "s1", SubjectID: "subj1", Instance: 2}
 
-	receivedInstance := pbconvert.NewInstanceIdentFromPB(
-		&pb.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2})
+	receivedInstance := pbconvert.InstanceIdentFromPB(
+		&pbcommon.InstanceIdent{ServiceId: "s1", SubjectId: "subj1", Instance: 2})
 
 	if expectedInstance != receivedInstance {
 		t.Error("Incorrect instance")
@@ -109,11 +118,11 @@ func TestInstanceIdentFromPB(t *testing.T) {
 }
 
 func TestNetworkParametersToPB(t *testing.T) {
-	expectedNetwork := &pb.NetworkParameters{
+	expectedNetwork := &pbsm.NetworkParameters{
 		Ip:         "172.18.0.1",
 		Subnet:     "172.18.0.0/16",
 		DnsServers: []string{"10.10.0.1"},
-		Rules: []*pb.FirewallRule{
+		Rules: []*pbsm.FirewallRule{
 			{
 				Proto:   "tcp",
 				DstIp:   "172.19.0.1",
@@ -159,11 +168,11 @@ func TestNetworkParametersFromPB(t *testing.T) {
 	}
 
 	receivedNetwork := pbconvert.NewNetworkParametersFromPB(
-		&pb.NetworkParameters{
+		&pbsm.NetworkParameters{
 			Ip:         "172.18.0.1",
 			Subnet:     "172.18.0.0/16",
 			DnsServers: []string{"10.10.0.1"},
-			Rules: []*pb.FirewallRule{
+			Rules: []*pbsm.FirewallRule{
 				{
 					Proto:   "tcp",
 					DstIp:   "172.19.0.1",
@@ -175,5 +184,99 @@ func TestNetworkParametersFromPB(t *testing.T) {
 
 	if !reflect.DeepEqual(expectedNetwork, receivedNetwork) {
 		t.Error("Incorrect network parameters")
+	}
+}
+
+func TestErrorInfoToPB(t *testing.T) {
+	expectedErrorInfo := &pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"}
+
+	pbErrorInfo := pbconvert.ErrorInfoToPB(
+		&cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"})
+
+	if !proto.Equal(pbErrorInfo, expectedErrorInfo) {
+		t.Error("Incorrect instance")
+	}
+}
+
+func TestErrorInfoFromPB(t *testing.T) {
+	expectedErrorInfo := &cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"}
+
+	receivedErrorInfo := pbconvert.ErrorInfoFromPB(
+		&pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"})
+
+	if *expectedErrorInfo != *receivedErrorInfo {
+		t.Error("Incorrect error info")
+	}
+}
+
+func TestNodeInfoFromPB(t *testing.T) {
+	expectedNodeInfo := cloudprotocol.NodeInfo{
+		NodeID:   "node1",
+		NodeType: "type1",
+		Name:     "name1",
+		Status:   "status1",
+		CPUs: []cloudprotocol.CPUInfo{
+			{
+				ModelName:  "model1",
+				NumCores:   1,
+				NumThreads: 2,
+				Arch:       "arch1",
+				ArchFamily: "family1",
+				MaxDMIPs:   3,
+			},
+			{
+				ModelName:  "model1",
+				NumCores:   1,
+				NumThreads: 2,
+				Arch:       "arch1",
+				ArchFamily: "family1",
+				MaxDMIPs:   3,
+			},
+		},
+		OSType:   "os1",
+		MaxDMIPs: 4,
+		TotalRAM: 5,
+		Attrs: map[string]interface{}{
+			"attr1": "value1",
+			"attr2": "value2",
+		},
+		Partitions: []cloudprotocol.PartitionInfo{{
+			Name:      "part1",
+			Types:     []string{"type1", "type2"},
+			TotalSize: 6,
+		}, {
+			Name:      "part2",
+			Types:     []string{"type3", "type4"},
+			TotalSize: 12,
+		}},
+		ErrorInfo: &cloudprotocol.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"},
+	}
+
+	receivedNodInfo := pbconvert.NodeInfoFromPB(
+		&pbiam.NodeInfo{
+			NodeId:   "node1",
+			NodeType: "type1",
+			Name:     "name1",
+			Status:   "status1",
+			Cpus: []*pbiam.CPUInfo{
+				{ModelName: "model1", NumCores: 1, NumThreads: 2, Arch: "arch1", ArchFamily: "family1", MaxDmips: 3},
+				{ModelName: "model1", NumCores: 1, NumThreads: 2, Arch: "arch1", ArchFamily: "family1", MaxDmips: 3},
+			},
+			OsType:   "os1",
+			MaxDmips: 4,
+			TotalRam: 5,
+			Attrs: []*pbiam.NodeAttribute{
+				{Name: "attr1", Value: "value1"},
+				{Name: "attr2", Value: "value2"},
+			},
+			Partitions: []*pbiam.PartitionInfo{
+				{Name: "part1", Types: []string{"type1", "type2"}, TotalSize: 6},
+				{Name: "part2", Types: []string{"type3", "type4"}, TotalSize: 12},
+			},
+			Error: &pbcommon.ErrorInfo{AosCode: 42, ExitCode: 5, Message: "error"},
+		})
+
+	if !reflect.DeepEqual(expectedNodeInfo, receivedNodInfo) {
+		t.Error("Incorrect node info")
 	}
 }

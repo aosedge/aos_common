@@ -32,7 +32,6 @@ github.com/golang/protobuf/proto
 github.com/golang/protobuf/ptypes
 github.com/golang/protobuf/ptypes/any
 github.com/golang/protobuf/ptypes/duration
-github.com/golang/protobuf/ptypes/empty
 github.com/golang/protobuf/ptypes/timestamp
 # github.com/google/go-tpm v0.9.0
 ## explicit; go 1.20
@@ -84,8 +83,6 @@ github.com/shirou/gopsutil/cpu
 github.com/shirou/gopsutil/disk
 github.com/shirou/gopsutil/internal/common
 github.com/shirou/gopsutil/mem
-github.com/shirou/gopsutil/net
-github.com/shirou/gopsutil/process
 # github.com/sirupsen/logrus v1.9.3
 ## explicit; go 1.13
 github.com/sirupsen/logrus
@@ -113,6 +110,10 @@ go.uber.org/atomic
 # golang.org/x/crypto v0.21.0
 ## explicit; go 1.18
 golang.org/x/crypto/sha3
+# golang.org/x/exp v0.0.0-20230315142452-642cacee5cc0
+## explicit; go 1.18
+golang.org/x/exp/constraints
+golang.org/x/exp/slices
 # golang.org/x/net v0.23.0
 ## explicit; go 1.18
 golang.org/x/net/http/httpguts

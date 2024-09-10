@@ -29,9 +29,9 @@ import (
 	"github.com/aosedge/aos_common/aoserrors"
 	"github.com/aosedge/aos_common/aostypes"
 	"github.com/aosedge/aos_common/api/cloudprotocol"
+	"github.com/aosedge/aos_common/utils/alertutils"
 	"github.com/shirou/gopsutil/disk"
 	"github.com/shirou/gopsutil/mem"
-	"github.com/shirou/gopsutil/process"
 	log "github.com/sirupsen/logrus"
 )
 
@@ -54,41 +54,45 @@ func init() {
  **********************************************************************************************************************/
 
 type testAlertsSender struct {
-	alertCallback func(alert cloudprotocol.AlertItem)
+	alerts []interface{}
 }
 
-type testMonitoringSender struct {
-	monitoringData chan cloudprotocol.NodeMonitoringData
+type trafficMonitoringData struct {
+	download, upload uint64
 }
 
 type testTrafficMonitoring struct {
-	inputTraffic, outputTraffic uint64
+	systemTraffic   trafficMonitoringData
+	instanceTraffic map[string]trafficMonitoringData
 }
 
-type testQuotaData struct {
+type testUsageData struct {
 	cpu       float64
 	ram       uint64
 	totalRAM  uint64
 	disk      uint64
 	totalDisk uint64
-	cores     int
 }
 
-type testAlertData struct {
-	alerts            []cloudprotocol.AlertItem
-	monitoringData    cloudprotocol.NodeMonitoringData
+type testData struct {
+	alerts            []interface{}
+	monitoringData    aostypes.NodeMonitoring
 	trafficMonitoring testTrafficMonitoring
-	quotaData         testQuotaData
+	usageData         testUsageData
 	monitoringConfig  ResourceMonitorParams
+	instanceID        string
 }
 
-type testProcessData struct {
-	uid       int32
-	quotaData testQuotaData
+type testInstancesUsage struct {
+	instances map[string]testUsageData
 }
 
-type testHostSystemUsage struct {
-	instances map[string]struct{ cpu, ram uint64 }
+type testNodeInfoProvider struct {
+	nodeInfo cloudprotocol.NodeInfo
+}
+
+type testNodeConfigProvider struct {
+	nodeConfig cloudprotocol.NodeConfig
 }
 
 /***********************************************************************************************************************
@@ -96,10 +100,9 @@ type testHostSystemUsage struct {
  **********************************************************************************************************************/
 
 var (
-	systemQuotaData               testQuotaData
-	instanceTrafficMonitoringData map[string]testTrafficMonitoring
-	processesData                 []*testProcessData
-	numCPU                        = runtime.NumCPU()
+	systemUsageData testUsageData
+	processesData   map[int32]testUsageData
+	numCPU          = runtime.NumCPU()
 )
 
 /***********************************************************************************************************************
@@ -119,322 +122,256 @@ func TestMain(m *testing.M) {
  **********************************************************************************************************************/
 
 func TestAlertProcessor(t *testing.T) {
-	var sourceValue uint64
+	type AlertItem struct {
+		time   time.Time
+		value  uint64
+		status string
+	}
 
-	destination := make([]uint64, 0, 2)
+	var (
+		sourceValue    uint64
+		receivedAlerts []AlertItem
+	)
 
-	alert := createAlertProcessor(
+	alert := createAlertProcessorPoints(
 		"Test",
 		&sourceValue,
-		func(time time.Time, value uint64) {
-			log.Debugf("T: %s, %d", time, value)
-			destination = append(destination, value)
+		func(time time.Time, value uint64, status string) {
+			receivedAlerts = append(receivedAlerts, AlertItem{time, value, status})
 		},
-		aostypes.AlertRuleParam{
+		aostypes.AlertRulePoints{
 			MinTimeout:   aostypes.Duration{Duration: 3 * time.Second},
 			MinThreshold: 80,
 			MaxThreshold: 90,
 		})
 
-	values := []uint64{50, 91, 79, 92, 93, 94, 95, 94, 79, 91, 92, 93, 94, 32, 91, 92, 93, 94, 95, 96}
-	alertsCount := []int{0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3}
+	values := []uint64{
+		50, 91, 79, 92, 93, 94, 95, 94, 79, 91, 92, 93, 94, 32, 91, 92, 93, 94, 95, 96, 85, 79, 77, 76, 75, 74, 73, 72,
+	}
 
-	currentTime := time.Now()
+	currentTime := time.Time{}
 
-	for i, value := range values {
+	expectedAlerts := []AlertItem{
+		{currentTime.Add(6 * time.Second), 95, AlertStatusRaise},
+		{currentTime.Add(9 * time.Second), 91, AlertStatusContinue},
+		{currentTime.Add(12 * time.Second), 94, AlertStatusContinue},
+		{currentTime.Add(15 * time.Second), 92, AlertStatusContinue},
+		{currentTime.Add(18 * time.Second), 95, AlertStatusContinue},
+		{currentTime.Add(21 * time.Second), 79, AlertStatusContinue},
+		{currentTime.Add(24 * time.Second), 75, AlertStatusFall},
+	}
+
+	for _, value := range values {
 		sourceValue = value
 
 		alert.checkAlertDetection(currentTime)
 
-		if alertsCount[i] != len(destination) {
-			t.Errorf("Wrong alert count %d at %d", len(destination), i)
-		}
-
 		currentTime = currentTime.Add(time.Second)
+	}
+
+	if !reflect.DeepEqual(receivedAlerts, expectedAlerts) {
+		t.Errorf("Incorrect alerts received: %v, expected: %v", receivedAlerts, expectedAlerts)
 	}
 }
 
 func TestSystemAlerts(t *testing.T) {
 	duration := 100 * time.Millisecond
 
-	var alerts []cloudprotocol.AlertItem
-
-	sender := &testAlertsSender{
-		alertCallback: func(alert cloudprotocol.AlertItem) {
-			alerts = append(alerts, alert)
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:   "testNode",
+			NodeType: "testNode",
+			MaxDMIPs: 10000,
+			TotalRAM: 10000,
+			Partitions: []cloudprotocol.PartitionInfo{
+				{Name: cloudprotocol.GenericPartition, Path: ".", TotalSize: 10000},
+			},
 		},
 	}
 
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
+	nodeConfigProvider := &testNodeConfigProvider{
+		nodeConfig: cloudprotocol.NodeConfig{
+			AlertRules: &aostypes.AlertRules{
+				CPU: &aostypes.AlertRulePercents{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 80,
+					MaxThreshold: 90,
+				},
+				RAM: &aostypes.AlertRulePercents{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 80,
+					MaxThreshold: 90,
+				},
+				UsedDisks: []aostypes.PartitionAlertRule{
+					{
+						AlertRulePercents: aostypes.AlertRulePercents{
+							MinTimeout:   aostypes.Duration{},
+							MinThreshold: 80,
+							MaxThreshold: 90,
+						},
+						Name: cloudprotocol.GenericPartition,
+					},
+				},
+				Download: &aostypes.AlertRulePoints{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 100,
+					MaxThreshold: 200,
+				},
+				Upload: &aostypes.AlertRulePoints{
+					MinTimeout:   aostypes.Duration{},
+					MinThreshold: 100,
+					MaxThreshold: 200,
+				},
+			},
+		},
 	}
-
-	var trafficMonitoring testTrafficMonitoring
 
 	systemCPUPercent = getSystemCPUPercent
 	systemVirtualMemory = getSystemRAM
 	systemDiskUsage = getSystemDisk
 
-	config := Config{
-		AlertRules: aostypes.AlertRules{
-			CPU: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 30,
-				MaxThreshold: 40,
-			},
-			RAM: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 1000,
-				MaxThreshold: 2000,
-			},
-			UsedDisks: []aostypes.PartitionAlertRuleParam{
-				{
-					AlertRuleParam: aostypes.AlertRuleParam{
-						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 2000,
-						MaxThreshold: 4000,
-					},
-					Name: cloudprotocol.GenericPartition,
-				},
-			},
-			InTraffic: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 100,
-				MaxThreshold: 200,
-			},
-			OutTraffic: &aostypes.AlertRuleParam{
-				MinTimeout:   aostypes.Duration{},
-				MinThreshold: 100,
-				MaxThreshold: 200,
-			},
-		},
-		SendPeriod: aostypes.Duration{Duration: duration},
-		PollPeriod: aostypes.Duration{Duration: duration},
-		Partitions: []PartitionConfig{{Name: cloudprotocol.GenericPartition, Path: "."}},
-	}
+	config := Config{PollPeriod: aostypes.Duration{Duration: duration}}
 
-	testData := []testAlertData{
+	nodeID := nodeInfoProvider.nodeInfo.NodeID
+
+	testData := []testData{
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 150, outputTraffic: 150},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
-					RAM:        1100,
-					CPU:        35,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
-					InTraffic:  150,
-					OutTraffic: 150,
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 150, upload: 150},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					CPU:      3500,
+					RAM:      1100,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Download: 150,
+					Upload:   150,
 				},
 			},
-			quotaData: testQuotaData{
+			usageData: testUsageData{
 				cpu:  35,
 				ram:  1100,
 				disk: 2300,
 			},
 		},
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 150, outputTraffic: 250},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
-					RAM:        1100,
-					CPU:        45,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
-					InTraffic:  150,
-					OutTraffic: 250,
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 150, upload: 250},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					RAM:      1100,
+					CPU:      10000,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Download: 150,
+					Upload:   250,
 				},
 			},
-			quotaData: testQuotaData{
-				cpu:  45,
+			usageData: testUsageData{
+				cpu:  100,
 				ram:  1100,
 				disk: 2300,
 			},
-			alerts: []cloudprotocol.AlertItem{
-				prepareSystemAlertItem("cpu", time.Now(), 45),
-				prepareSystemAlertItem("outTraffic", time.Now(), 250),
+			alerts: []interface{}{
+				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 350, outputTraffic: 250},
-			monitoringData: cloudprotocol.NodeMonitoringData{
-				MonitoringData: cloudprotocol.MonitoringData{
-					RAM:        2100,
-					CPU:        45,
-					Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4300}},
-					InTraffic:  350,
-					OutTraffic: 250,
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 350, upload: 250},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeData: aostypes.MonitoringData{
+					CPU:      10000,
+					RAM:      10000,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 10000}},
+					Download: 350,
+					Upload:   250,
 				},
 			},
-			quotaData: testQuotaData{
-				cpu:  45,
-				ram:  2100,
-				disk: 4300,
+			usageData: testUsageData{
+				cpu:  100,
+				ram:  10000,
+				disk: 10000,
 			},
-			alerts: []cloudprotocol.AlertItem{
-				prepareSystemAlertItem("cpu", time.Now(), 45),
-				prepareSystemAlertItem("ram", time.Now(), 2100),
-				prepareSystemAlertItem("generic", time.Now(), 4300),
-				prepareSystemAlertItem("inTraffic", time.Now(), 350),
-				prepareSystemAlertItem("outTraffic", time.Now(), 250),
+			alerts: []interface{}{
+				prepareSystemAlertItem(nodeID, "cpu", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "ram", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "generic", time.Time{}, 10000, "raise"),
+				prepareSystemAlertItem(nodeID, "download", time.Time{}, 350, "raise"),
+				prepareSystemAlertItem(nodeID, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 	}
 
-	for _, item := range testData {
-		trafficMonitoring = item.trafficMonitoring
-		systemQuotaData = item.quotaData
+	for i, item := range testData {
+		t.Logf("Test case: %d", i)
 
-		monitor, err := New("node1", config, sender, monitoringSender, &trafficMonitoring)
+		alertSender := &testAlertsSender{}
+		trafficMonitoring := item.trafficMonitoring
+		systemUsageData = item.usageData
+
+		monitor, err := New(config, nodeInfoProvider, nodeConfigProvider,
+			&trafficMonitoring, alertSender)
 		if err != nil {
 			t.Fatalf("Can't create monitoring instance: %s", err)
 		}
 
 		select {
-		case monitoringData := <-monitoringSender.monitoringData:
-			if !reflect.DeepEqual(monitoringData.MonitoringData, item.monitoringData.MonitoringData) {
-				t.Errorf("Incorrect system monitoring data: %v", monitoringData.MonitoringData)
+		case monitoringData := <-monitor.GetNodeMonitoringChannel():
+			monitoringData.NodeData.Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(monitoringData.NodeData, item.monitoringData.NodeData) {
+				t.Errorf("Incorrect system monitoring data: %v", monitoringData.NodeData)
 			}
 
-			if len(alerts) != len(item.alerts) {
-				t.Fatalf("Incorrect alerts number: %d", len(alerts))
-			}
-
-			for i, currentAlert := range alerts {
-				if item.alerts[i].Payload != currentAlert.Payload {
-					t.Errorf("Incorrect system alert payload: %v", currentAlert.Payload)
-				}
+			if !AlertSlicesEqual(alertSender.alerts, item.alerts) {
+				t.Errorf("Incorrect system alerts: %v", alertSender.alerts)
 			}
 
 		case <-time.After(duration * 2):
 			t.Fatal("Monitoring data timeout")
 		}
 
-		alerts = nil
-
 		monitor.Close()
-	}
-}
-
-func TestGetSystemInfo(t *testing.T) {
-	duration := 100 * time.Millisecond
-
-	systemVirtualMemory = getSystemRAM
-	systemDiskUsage = getSystemDisk
-
-	testData := []struct {
-		config             Config
-		quotaData          testQuotaData
-		expectedSystemInfo cloudprotocol.SystemInfo
-	}{
-		{
-			config: Config{
-				Partitions: []PartitionConfig{{
-					Name:  cloudprotocol.GenericPartition,
-					Path:  ".",
-					Types: []string{"storage"},
-				}},
-				SendPeriod: aostypes.Duration{Duration: duration},
-				PollPeriod: aostypes.Duration{Duration: duration},
-			},
-			quotaData: testQuotaData{
-				cores:     2,
-				totalRAM:  1000,
-				totalDisk: 1000,
-			},
-			expectedSystemInfo: cloudprotocol.SystemInfo{
-				NumCPUs:  2,
-				TotalRAM: 1000,
-				Partitions: []cloudprotocol.PartitionInfo{
-					{
-						Name:      cloudprotocol.GenericPartition,
-						Types:     []string{"storage"},
-						TotalSize: 1000,
-					},
-				},
-			},
-		},
-		{
-			config: Config{
-				Partitions: []PartitionConfig{{
-					Name:  cloudprotocol.StatesPartition,
-					Path:  ".",
-					Types: []string{"state"},
-				}},
-				SendPeriod: aostypes.Duration{Duration: duration},
-				PollPeriod: aostypes.Duration{Duration: duration},
-			},
-			quotaData: testQuotaData{
-				cores:     3,
-				totalRAM:  2000,
-				totalDisk: 4000,
-			},
-			expectedSystemInfo: cloudprotocol.SystemInfo{
-				NumCPUs:  3,
-				TotalRAM: 2000,
-				Partitions: []cloudprotocol.PartitionInfo{
-					{
-						Name:      cloudprotocol.StatesPartition,
-						Types:     []string{"state"},
-						TotalSize: 4000,
-					},
-				},
-			},
-		},
-	}
-
-	sender := &testAlertsSender{}
-	monitoringSender := &testMonitoringSender{}
-
-	defer func() {
-		cpuCount = runtime.NumCPU()
-	}()
-
-	for _, item := range testData {
-		systemQuotaData = item.quotaData
-		cpuCount = systemQuotaData.cores
-
-		monitor, err := New("node1", item.config, sender, monitoringSender, &testTrafficMonitoring{})
-		if err != nil {
-			t.Errorf("Can't create monitoring instance: %s", err)
-		}
-
-		systemInfo := monitor.GetSystemInfo()
-
-		if !reflect.DeepEqual(item.expectedSystemInfo, systemInfo) {
-			t.Error("Unexpected system info")
-		}
 	}
 }
 
 func TestInstances(t *testing.T) {
 	duration := 100 * time.Millisecond
-	instanceTrafficMonitoringData = make(map[string]testTrafficMonitoring)
 
-	var alerts []cloudprotocol.AlertItem
-
-	sender := &testAlertsSender{
-		alertCallback: func(alert cloudprotocol.AlertItem) {
-			alerts = append(alerts, alert)
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:   "testNode",
+			NodeType: "testNode",
+			MaxDMIPs: 10000,
+			TotalRAM: 10000,
+			Partitions: []cloudprotocol.PartitionInfo{
+				{Name: cloudprotocol.ServicesPartition, Path: ".", TotalSize: 10000},
+				{Name: cloudprotocol.LayersPartition, Path: ".", TotalSize: 10000},
+				{Name: cloudprotocol.StatesPartition, Path: ".", TotalSize: 10000},
+			},
 		},
 	}
-
-	trafficMonitoring := &testTrafficMonitoring{}
-
-	monitoringSender := &testMonitoringSender{
-		monitoringData: make(chan cloudprotocol.NodeMonitoringData, 1),
+	nodeConfigProvider := &testNodeConfigProvider{}
+	trafficMonitoring := &testTrafficMonitoring{
+		instanceTraffic: make(map[string]trafficMonitoringData),
 	}
+	alertSender := &testAlertsSender{}
+	testInstancesUsage := newTestInstancesUsage()
 
-	testHostSystemUsageInstance := newTestHostSystemUsage()
-
-	hostSystemUsageInstance = testHostSystemUsageInstance
+	instanceUsage = testInstancesUsage
 	defer func() {
-		hostSystemUsageInstance = nil
+		instanceUsage = nil
 	}()
 
-	monitor, err := New("node1", Config{
-		SendPeriod: aostypes.Duration{Duration: duration},
+	monitor, err := New(Config{
 		PollPeriod: aostypes.Duration{Duration: duration},
-		Partitions: []PartitionConfig{{Name: cloudprotocol.GenericPartition, Path: "."}},
 	},
-		sender, monitoringSender, trafficMonitoring)
+		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender)
 	if err != nil {
 		t.Fatalf("Can't create monitoring instance: %s", err)
 	}
@@ -442,10 +379,15 @@ func TestInstances(t *testing.T) {
 
 	getUserFSQuotaUsage = testUserFSQuotaUsage
 
-	testData := []testAlertData{
+	testData := []testData{
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 150, outputTraffic: 150},
-			quotaData: testQuotaData{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {download: 150, upload: 150},
+				},
+			},
+			usageData: testUsageData{
 				cpu:  35,
 				ram:  1100,
 				disk: 2300,
@@ -459,32 +401,32 @@ func TestInstances(t *testing.T) {
 				UID: 5000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
+					CPU: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
+					RAM: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
+							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
+					Download: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
+					Upload: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
@@ -492,12 +434,37 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							RAM: 1100,
+							CPU: 3500,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
+							},
+							Download: 150,
+							Upload:   150,
+						},
+					},
+				},
+			},
 		},
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 250, outputTraffic: 150},
-			quotaData: testQuotaData{
-				cpu:  45,
-				ram:  2100,
+			instanceID: "instance1",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance1": {download: 250, upload: 150},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  25,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -509,32 +476,32 @@ func TestInstances(t *testing.T) {
 				UID: 3000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
+					CPU: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
+					RAM: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
+							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.LayersPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
+					Download: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
+					Upload: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
@@ -542,24 +509,49 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.LayersPartition, Path: "."}},
 			},
-			alerts: []cloudprotocol.AlertItem{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service2",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							CPU: 2500,
+							RAM: 9000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.LayersPartition, UsedSize: 2300},
+							},
+							Download: 250,
+							Upload:   150,
+						},
+					},
+				},
+			},
+			alerts: []interface{}{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
-				}, "ram", time.Now(), 2100),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service2",
 					SubjectID: "subject1",
 					Instance:  1,
-				}, "inTraffic", time.Now(), 250),
+				}, "download", time.Time{}, 250, "raise"),
 			},
 		},
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 150, outputTraffic: 250},
-			quotaData: testQuotaData{
-				cpu:  45,
-				ram:  1100,
+			instanceID: "instance2",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance2": {download: 150, upload: 250},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  90,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -571,32 +563,32 @@ func TestInstances(t *testing.T) {
 				UID: 2000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
+					CPU: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
+					RAM: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
+							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.ServicesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
+					Download: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
+					Upload: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
@@ -604,29 +596,54 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
 			},
-			alerts: []cloudprotocol.AlertItem{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject2",
+							Instance:  2,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							CPU: 9000,
+							RAM: 9000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
+							},
+							Download: 150,
+							Upload:   250,
+						},
+					},
+				},
+			},
+			alerts: []interface{}{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "ram", time.Now(), 2200),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "cpu", time.Now(), uint64(math.Round((45+45)/float64(numCPU)))),
+				}, "cpu", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "outTraffic", time.Now(), 250),
+				}, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 		{
-			trafficMonitoring: testTrafficMonitoring{inputTraffic: 150, outputTraffic: 250},
-			quotaData: testQuotaData{
-				cpu:  45,
-				ram:  1100,
+			instanceID: "instance3",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance3": {download: 150, upload: 250},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  90,
+				ram:  9000,
 				disk: 2300,
 			},
 			monitoringConfig: ResourceMonitorParams{
@@ -638,32 +655,32 @@ func TestInstances(t *testing.T) {
 				UID: 2000,
 				GID: 5000,
 				AlertRules: &aostypes.AlertRules{
-					CPU: &aostypes.AlertRuleParam{
+					CPU: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 30,
-						MaxThreshold: 40,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					RAM: &aostypes.AlertRuleParam{
+					RAM: &aostypes.AlertRulePercents{
 						MinTimeout:   aostypes.Duration{},
-						MinThreshold: 1000,
-						MaxThreshold: 2000,
+						MinThreshold: 80,
+						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRuleParam{
+					UsedDisks: []aostypes.PartitionAlertRule{
 						{
-							AlertRuleParam: aostypes.AlertRuleParam{
+							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
-								MinThreshold: 2000,
-								MaxThreshold: 3000,
+								MinThreshold: 80,
+								MaxThreshold: 90,
 							},
 							Name: cloudprotocol.StatesPartition,
 						},
 					},
-					InTraffic: &aostypes.AlertRuleParam{
+					Download: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
 					},
-					OutTraffic: &aostypes.AlertRuleParam{
+					Upload: &aostypes.AlertRulePoints{
 						MinTimeout:   aostypes.Duration{},
 						MinThreshold: 100,
 						MaxThreshold: 200,
@@ -671,153 +688,109 @@ func TestInstances(t *testing.T) {
 				},
 				Partitions: []PartitionParam{{Name: cloudprotocol.StatesPartition, Path: "."}},
 			},
-			alerts: []cloudprotocol.AlertItem{
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject2",
+							Instance:  2,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							CPU: 9000,
+							RAM: 9000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.StatesPartition, UsedSize: 2300},
+							},
+							Download: 150,
+							Upload:   250,
+						},
+					},
+				},
+			},
+			alerts: []interface{}{
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "ram", time.Now(), 2200),
+				}, "ram", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "cpu", time.Now(), uint64(math.Round((45+45)/float64(numCPU)))),
+				}, "cpu", time.Time{}, 9000, "raise"),
 				prepareInstanceAlertItem(aostypes.InstanceIdent{
 					ServiceID: "service1",
 					SubjectID: "subject2",
 					Instance:  2,
-				}, "outTraffic", time.Now(), 250),
+				}, "upload", time.Time{}, 250, "raise"),
 			},
 		},
 	}
 
 	var expectedInstanceAlertCount int
 
-	monitoringInstances := []cloudprotocol.InstanceMonitoringData{
-		{
-			InstanceIdent: aostypes.InstanceIdent{
-				ServiceID: "service1",
-				SubjectID: "subject1",
-				Instance:  1,
-			},
-			MonitoringData: cloudprotocol.MonitoringData{
-				RAM:        1100,
-				CPU:        uint64(math.Round(35 / float64(numCPU))),
-				Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.ServicesPartition, UsedSize: 2300}},
-				InTraffic:  150,
-				OutTraffic: 150,
-			},
-		},
-		{
-			InstanceIdent: aostypes.InstanceIdent{
-				ServiceID: "service2",
-				SubjectID: "subject1",
-				Instance:  1,
-			},
-			MonitoringData: cloudprotocol.MonitoringData{
-				RAM:        2100,
-				CPU:        uint64(math.Round(45 / float64(numCPU))),
-				Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.LayersPartition, UsedSize: 2300}},
-				InTraffic:  250,
-				OutTraffic: 150,
-			},
-		},
-		{
-			InstanceIdent: aostypes.InstanceIdent{
-				ServiceID: "service1",
-				SubjectID: "subject2",
-				Instance:  2,
-			},
-			MonitoringData: cloudprotocol.MonitoringData{
-				RAM:        2200,
-				CPU:        uint64(math.Round((45 + 45) / float64(numCPU))),
-				Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.ServicesPartition, UsedSize: 2300}},
-				InTraffic:  150,
-				OutTraffic: 250,
-			},
-		},
-		{
-			InstanceIdent: aostypes.InstanceIdent{
-				ServiceID: "service1",
-				SubjectID: "subject2",
-				Instance:  2,
-			},
-			MonitoringData: cloudprotocol.MonitoringData{
-				RAM:        2200,
-				CPU:        uint64(math.Round((45 + 45) / float64(numCPU))),
-				Disk:       []cloudprotocol.PartitionUsage{{Name: cloudprotocol.StatesPartition, UsedSize: 2300}},
-				InTraffic:  150,
-				OutTraffic: 250,
-			},
-		},
-	}
-
-	for i, instance := range monitoringInstances {
-		instanceID := fmt.Sprintf("instance%d", i)
-
-		testHostSystemUsageInstance.instances[instanceID] = struct{ cpu, ram uint64 }{instance.CPU, instance.RAM}
-	}
+	processesData = make(map[int32]testUsageData)
 
 	for i, item := range testData {
-		processesData = append(processesData, &testProcessData{
-			uid:       int32(item.monitoringConfig.UID),
-			quotaData: item.quotaData,
-		})
+		t.Logf("Test case: %d", i)
 
-		instanceID := fmt.Sprintf("instance%d", i)
+		testInstancesUsage.instances[item.instanceID] = testUsageData{
+			cpu: item.usageData.cpu, ram: item.usageData.ram,
+		}
 
-		if err := monitor.StartInstanceMonitor(instanceID, item.monitoringConfig); err != nil {
+		processesData[int32(item.monitoringConfig.UID)] = item.usageData
+		trafficMonitoring.instanceTraffic[item.instanceID] = item.trafficMonitoring.instanceTraffic[item.instanceID]
+
+		if err := monitor.StartInstanceMonitor(item.instanceID, item.monitoringConfig); err != nil {
 			t.Fatalf("Can't start monitoring instance: %s", err)
 		}
 
-		instanceTrafficMonitoringData[instanceID] = item.trafficMonitoring
 		expectedInstanceAlertCount += len(item.alerts)
 	}
 
-	defer func() {
-		processesData = nil
-	}()
-
 	select {
-	case monitoringData := <-monitoringSender.monitoringData:
-		if len(monitoringData.ServiceInstances) != len(monitoringInstances) {
-			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.ServiceInstances))
+	case monitoringData := <-monitor.GetNodeMonitoringChannel():
+		if len(monitoringData.InstancesData) != len(testData) {
+			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
 
 	monitoringLoop:
-		for _, receivedMonitoring := range monitoringData.ServiceInstances {
-			for _, expectedMonitoring := range monitoringInstances {
-				if reflect.DeepEqual(expectedMonitoring, receivedMonitoring) {
+		for _, receivedMonitoring := range monitoringData.InstancesData {
+			for _, item := range testData {
+				receivedMonitoring.MonitoringData.Timestamp = time.Time{}
+
+				if reflect.DeepEqual(item.monitoringData.InstancesData[0], receivedMonitoring) {
 					continue monitoringLoop
 				}
 			}
 
-			t.Errorf("Unexpected monitoring data: %v", receivedMonitoring)
+			t.Errorf("Wrong monitoring data: %v", receivedMonitoring)
 		}
 
 	case <-time.After(duration * 2):
 		t.Fatal("Monitoring data timeout")
 	}
 
-	if len(alerts) != expectedInstanceAlertCount {
-		t.Fatalf("Incorrect alerts number: %d", len(alerts))
+	if len(alertSender.alerts) != expectedInstanceAlertCount {
+		t.Fatalf("Incorrect alerts number: %d != %d", len(alertSender.alerts), expectedInstanceAlertCount)
 	}
 
 	for i, item := range testData {
 	alertLoop:
 		for _, expectedAlert := range item.alerts {
-			for _, receivedAlert := range alerts {
-				if expectedAlert.Payload == receivedAlert.Payload {
+			for _, receivedAlert := range alertSender.alerts {
+				if alertutils.AlertsPayloadEqual(expectedAlert, receivedAlert) {
 					continue alertLoop
 				}
 			}
 
-			t.Error("Incorrect system alert payload")
+			t.Errorf("Incorrect instance alert payload: %v", expectedAlert)
 		}
 
 		instanceID := fmt.Sprintf("instance%d", i)
 
-		delete(testHostSystemUsageInstance.instances, instanceID)
+		delete(testInstancesUsage.instances, instanceID)
 
 		if err := monitor.StopInstanceMonitor(instanceID); err != nil {
 			t.Fatalf("Can't stop monitoring instance: %s", err)
@@ -827,9 +800,9 @@ func TestInstances(t *testing.T) {
 	// this select is used to make sure that the monitoring of the instances has been stopped
 	// and monitoring data is not received on them
 	select {
-	case monitoringData := <-monitoringSender.monitoringData:
-		if len(monitoringData.ServiceInstances) != 0 {
-			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.ServiceInstances))
+	case monitoringData := <-monitor.GetNodeMonitoringChannel():
+		if len(monitoringData.InstancesData) != 0 {
+			t.Fatalf("Incorrect instance monitoring count: %d", len(monitoringData.InstancesData))
 		}
 
 	case <-time.After(duration * 2):
@@ -837,16 +810,382 @@ func TestInstances(t *testing.T) {
 	}
 }
 
+func TestSystemAveraging(t *testing.T) {
+	duration := 100 * time.Millisecond
+
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:     "testNode",
+			NodeType:   "testNode",
+			Partitions: []cloudprotocol.PartitionInfo{{Name: cloudprotocol.GenericPartition, Path: "."}},
+			MaxDMIPs:   10000,
+		},
+	}
+
+	nodeConfigProvider := &testNodeConfigProvider{}
+	alertSender := &testAlertsSender{}
+	trafficMonitoring := &testTrafficMonitoring{}
+
+	systemCPUPercent = getSystemCPUPercent
+	systemVirtualMemory = getSystemRAM
+	systemDiskUsage = getSystemDisk
+
+	config := Config{
+		PollPeriod:    aostypes.Duration{Duration: duration},
+		AverageWindow: aostypes.Duration{Duration: duration * 3},
+	}
+
+	testData := []testData{
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 100, upload: 200},
+			},
+			usageData: testUsageData{cpu: 10, ram: 1000, disk: 2000},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					CPU:      1000,
+					RAM:      1000,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
+					Download: 100,
+					Upload:   200,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 200, upload: 300},
+			},
+			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					CPU:      1500,
+					RAM:      1500,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
+					Download: 150,
+					Upload:   250,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 300, upload: 400},
+			},
+			usageData: testUsageData{cpu: 30, ram: 3000, disk: 6000},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					CPU:      2000,
+					RAM:      2000,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Download: 200,
+					Upload:   300,
+				},
+			},
+		},
+		{
+			trafficMonitoring: testTrafficMonitoring{
+				systemTraffic: trafficMonitoringData{download: 500, upload: 600},
+			},
+			usageData: testUsageData{cpu: 20, ram: 2000, disk: 4000},
+			monitoringData: aostypes.NodeMonitoring{
+				NodeID: "testNode",
+				NodeData: aostypes.MonitoringData{
+					CPU:      2000,
+					RAM:      2000,
+					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Download: 300,
+					Upload:   400,
+				},
+			},
+		},
+	}
+
+	monitor, err := New(config, nodeInfoProvider, nodeConfigProvider,
+		trafficMonitoring, alertSender)
+	if err != nil {
+		t.Fatalf("Can't create monitoring instance: %s", err)
+	}
+	defer monitor.Close()
+
+	for _, item := range testData {
+		*trafficMonitoring = item.trafficMonitoring
+		systemUsageData = item.usageData
+
+		select {
+		case <-monitor.GetNodeMonitoringChannel():
+			averageData, err := monitor.GetAverageMonitoring()
+			if err != nil {
+				t.Errorf("Can't get average monitoring data: %s", err)
+			}
+
+			averageData.NodeData.Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(averageData.NodeData, item.monitoringData.NodeData) {
+				t.Errorf("Incorrect average monitoring data: %v", averageData)
+			}
+
+		case <-time.After(duration * 2):
+			t.Fatal("Monitoring data timeout")
+		}
+	}
+}
+
+func TestInstanceAveraging(t *testing.T) {
+	duration := 100 * time.Millisecond
+
+	nodeInfoProvider := &testNodeInfoProvider{
+		nodeInfo: cloudprotocol.NodeInfo{
+			NodeID:   "testNode",
+			NodeType: "testNode",
+			MaxDMIPs: 10000,
+		},
+	}
+	nodeConfigProvider := &testNodeConfigProvider{}
+	trafficMonitoring := &testTrafficMonitoring{
+		instanceTraffic: make(map[string]trafficMonitoringData),
+	}
+	alertSender := &testAlertsSender{}
+	testInstancesUsage := newTestInstancesUsage()
+
+	instanceUsage = testInstancesUsage
+	defer func() {
+		instanceUsage = nil
+	}()
+
+	monitor, err := New(Config{
+		PollPeriod:    aostypes.Duration{Duration: duration},
+		AverageWindow: aostypes.Duration{Duration: duration * 3},
+	},
+		nodeInfoProvider, nodeConfigProvider, trafficMonitoring, alertSender)
+	if err != nil {
+		t.Fatalf("Can't create monitoring instance: %s", err)
+	}
+	defer monitor.Close()
+
+	getUserFSQuotaUsage = testUserFSQuotaUsage
+
+	testData := []testData{
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {download: 100, upload: 100},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  10,
+				ram:  1000,
+				disk: 2000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							RAM: 1000,
+							CPU: 1000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2000},
+							},
+							Download: 100,
+							Upload:   100,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {download: 200, upload: 200},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  20,
+				ram:  2000,
+				disk: 3000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							RAM: 1500,
+							CPU: 1500,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 2500},
+							},
+							Download: 150,
+							Upload:   150,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {download: 300, upload: 300},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  30,
+				ram:  3000,
+				disk: 4000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							RAM: 2000,
+							CPU: 2000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
+							},
+							Download: 200,
+							Upload:   200,
+						},
+					},
+				},
+			},
+		},
+		{
+			instanceID: "instance0",
+			trafficMonitoring: testTrafficMonitoring{
+				instanceTraffic: map[string]trafficMonitoringData{
+					"instance0": {download: 200, upload: 200},
+				},
+			},
+			usageData: testUsageData{
+				cpu:  20,
+				ram:  2000,
+				disk: 3000,
+			},
+			monitoringConfig: ResourceMonitorParams{
+				InstanceIdent: aostypes.InstanceIdent{
+					ServiceID: "service1",
+					SubjectID: "subject1",
+					Instance:  1,
+				},
+				Partitions: []PartitionParam{{Name: cloudprotocol.ServicesPartition, Path: "."}},
+			},
+			monitoringData: aostypes.NodeMonitoring{
+				InstancesData: []aostypes.InstanceMonitoring{
+					{
+						InstanceIdent: aostypes.InstanceIdent{
+							ServiceID: "service1",
+							SubjectID: "subject1",
+							Instance:  1,
+						},
+						MonitoringData: aostypes.MonitoringData{
+							RAM: 2000,
+							CPU: 2000,
+							Disk: []aostypes.PartitionUsage{
+								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
+							},
+							Download: 200,
+							Upload:   200,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	processesData = map[int32]testUsageData{}
+
+	if err := monitor.StartInstanceMonitor(testData[0].instanceID, testData[0].monitoringConfig); err != nil {
+		t.Fatalf("Can't start monitoring instance: %s", err)
+	}
+
+	for _, item := range testData {
+		testInstancesUsage.instances[item.instanceID] = testUsageData{cpu: item.usageData.cpu, ram: item.usageData.ram}
+		processesData[int32(item.monitoringConfig.UID)] = item.usageData
+		trafficMonitoring.instanceTraffic[item.instanceID] = item.trafficMonitoring.instanceTraffic[item.instanceID]
+
+		select {
+		case <-monitor.GetNodeMonitoringChannel():
+			averageData, err := monitor.GetAverageMonitoring()
+			if err != nil {
+				t.Errorf("Can't get average monitoring data: %s", err)
+			}
+
+			averageData.InstancesData[0].Timestamp = time.Time{}
+
+			if !reflect.DeepEqual(averageData.InstancesData[0].MonitoringData,
+				item.monitoringData.InstancesData[0].MonitoringData) {
+				t.Errorf("Incorrect average monitoring data: %v", averageData.InstancesData[0].MonitoringData)
+			}
+
+		case <-time.After(duration * 2):
+			t.Fatal("Monitoring data timeout")
+		}
+	}
+}
+
 /***********************************************************************************************************************
  * Interfaces
  **********************************************************************************************************************/
 
-func (sender *testAlertsSender) SendAlert(alert cloudprotocol.AlertItem) {
-	sender.alertCallback(alert)
+func (sender *testAlertsSender) SendAlert(alert interface{}) {
+	sender.alerts = append(sender.alerts, alert)
 }
 
-func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudprotocol.NodeMonitoringData) {
-	sender.monitoringData <- monitoringData
+func (provider *testNodeInfoProvider) GetCurrentNodeInfo() (cloudprotocol.NodeInfo, error) {
+	return provider.nodeInfo, nil
+}
+
+func (provider *testNodeInfoProvider) NodeInfoChangedChannel() <-chan cloudprotocol.NodeInfo {
+	return nil
+}
+
+func (provider *testNodeConfigProvider) GetCurrentNodeConfig() (cloudprotocol.NodeConfig, error) {
+	return provider.nodeConfig, nil
+}
+
+func (provider *testNodeConfigProvider) SubscribeCurrentNodeConfigChange() <-chan cloudprotocol.NodeConfig {
+	return nil
 }
 
 /***********************************************************************************************************************
@@ -854,71 +1193,70 @@ func (sender *testMonitoringSender) SendMonitoringData(monitoringData cloudproto
  **********************************************************************************************************************/
 
 func (trafficMonitoring *testTrafficMonitoring) GetSystemTraffic() (inputTraffic, outputTraffic uint64, err error) {
-	return trafficMonitoring.inputTraffic, trafficMonitoring.outputTraffic, nil
+	return trafficMonitoring.systemTraffic.download, trafficMonitoring.systemTraffic.upload, nil
 }
 
 func (trafficMonitoring *testTrafficMonitoring) GetInstanceTraffic(instanceID string) (
 	inputTraffic, outputTraffic uint64, err error,
 ) {
-	trafficMonitoringData, ok := instanceTrafficMonitoringData[instanceID]
+	trafficMonitoringData, ok := trafficMonitoring.instanceTraffic[instanceID]
 	if !ok {
 		return 0, 0, aoserrors.New("incorrect instance ID")
 	}
 
-	return trafficMonitoringData.inputTraffic, trafficMonitoringData.outputTraffic, nil
+	return trafficMonitoringData.download, trafficMonitoringData.upload, nil
 }
 
-func getSystemCPUPercent(interval time.Duration, percpu bool) (persent []float64, err error) {
-	return []float64{systemQuotaData.cpu}, nil
+func getSystemCPUPercent(interval time.Duration, percpu bool) (percent []float64, err error) {
+	return []float64{systemUsageData.cpu * float64(cpuCount)}, nil
 }
 
 func getSystemRAM() (virtualMemory *mem.VirtualMemoryStat, err error) {
-	return &mem.VirtualMemoryStat{Used: systemQuotaData.ram, Total: systemQuotaData.totalRAM}, nil
+	return &mem.VirtualMemoryStat{Used: systemUsageData.ram, Total: systemUsageData.totalRAM}, nil
 }
 
 func getSystemDisk(path string) (diskUsage *disk.UsageStat, err error) {
-	return &disk.UsageStat{Used: systemQuotaData.disk, Total: systemQuotaData.totalDisk}, nil
-}
-
-func (p *testProcessData) Uids() ([]int32, error) {
-	return []int32{p.uid}, nil
-}
-
-func (p *testProcessData) CPUPercent() (float64, error) {
-	return p.quotaData.cpu, nil
-}
-
-func (p *testProcessData) MemoryInfo() (*process.MemoryInfoStat, error) {
-	return &process.MemoryInfoStat{
-		RSS: p.quotaData.ram,
-	}, nil
+	return &disk.UsageStat{Used: systemUsageData.disk, Total: systemUsageData.totalDisk}, nil
 }
 
 func testUserFSQuotaUsage(path string, uid, gid uint32) (byteUsed uint64, err error) {
-	for _, quota := range processesData {
-		if quota.uid == int32(uid) {
-			return quota.quotaData.disk, nil
-		}
+	usageData, ok := processesData[int32(uid)]
+	if !ok {
+		return 0, aoserrors.New("UID not found")
 	}
 
-	return 0, aoserrors.New("incorrect uid")
+	return usageData.disk, nil
 }
 
-func newTestHostSystemUsage() *testHostSystemUsage {
-	return &testHostSystemUsage{instances: map[string]struct{ cpu, ram uint64 }{}}
+func newTestInstancesUsage() *testInstancesUsage {
+	return &testInstancesUsage{instances: map[string]testUsageData{}}
 }
 
-func (host *testHostSystemUsage) CacheSystemInfos() {
+func (host *testInstancesUsage) CacheSystemInfos() {
 }
 
-func (host *testHostSystemUsage) FillSystemInfo(instanceID string, instance *instanceMonitoring) error {
+func (host *testInstancesUsage) FillSystemInfo(instanceID string, instance *instanceMonitoring) error {
 	data, ok := host.instances[instanceID]
 	if !ok {
 		return aoserrors.Errorf("instance %s not found", instanceID)
 	}
 
-	instance.monitoringData.CPU = data.cpu
-	instance.monitoringData.RAM = data.ram
+	instance.monitoring.CPU = uint64(math.Round(data.cpu))
+	instance.monitoring.RAM = data.ram
 
 	return nil
+}
+
+func AlertSlicesEqual(alerts1, alerts2 []interface{}) bool {
+	if len(alerts1) != len(alerts2) {
+		return false
+	}
+
+	for i := range alerts1 {
+		if !alertutils.AlertsPayloadEqual(alerts1[i], alerts2[i]) {
+			return false
+		}
+	}
+
+	return true
 }

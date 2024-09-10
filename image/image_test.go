@@ -206,18 +206,6 @@ func TestCreateFileInfo(t *testing.T) {
 	if shaStr[1] != actualCheckSum {
 		t.Errorf("sha256 not equals. Expected: %s, actual: %s", shaStr[1], actualCheckSum)
 	}
-
-	out, err = exec.Command("openssl", "dgst", "-sha3-512", fileNamePath).Output()
-	if err != nil {
-		t.Fatalf("openssl dgst -sha3-512 returns error result: %s", err)
-	}
-
-	shaStr = strings.Fields(string(out))
-	actualCheckSum = hex.EncodeToString(info.Sha512)
-
-	if shaStr[1] != actualCheckSum {
-		t.Errorf("sha512 not equals. Expected: %s, actual: %s", shaStr[1], actualCheckSum)
-	}
 }
 
 func TestCheckFileInfo(t *testing.T) {
@@ -256,12 +244,6 @@ func TestCheckFileInfo(t *testing.T) {
 	}
 
 	info.Sha256[0] = tmpSha256
-
-	// Bad sha512sum case
-	info.Sha512[0]--
-	if err = image.CheckFileInfo(context.Background(), fileNamePath, info); err == nil {
-		t.Error("sha512 should not be matched")
-	}
 }
 
 func TestUncompressedContentSize(t *testing.T) {

@@ -54,8 +54,8 @@ func init() {
  **********************************************************************************************************************/
 
 type instanceInfo struct {
-	instanceIdent aostypes.InstanceIdent
-	aosVersion    uint64
+	instanceIdent  aostypes.InstanceIdent
+	serviceVersion string
 }
 
 type testInstanceProvider struct {
@@ -74,7 +74,7 @@ type testSystemdJournal struct {
 }
 
 type testSender struct {
-	alertsChannel chan cloudprotocol.AlertItem
+	alertsChannel chan interface{}
 }
 
 /***********************************************************************************************************************
@@ -123,7 +123,7 @@ func TestGetSystemError(t *testing.T) {
 	}
 
 	if err = waitAlerts(testSender.alertsChannel, 5*time.Second,
-		cloudprotocol.AlertTagSystemError, aostypes.InstanceIdent{}, 0, messages); err != nil {
+		cloudprotocol.AlertTagSystemError, aostypes.InstanceIdent{}, "1.0.0", messages); err != nil {
 		t.Errorf("Result failed: %s", err)
 	}
 }
@@ -149,7 +149,7 @@ func TestGetServiceError(t *testing.T) {
 			SubjectID: "subject0",
 			Instance:  0,
 		},
-		aosVersion: 0,
+		serviceVersion: "1.0.0",
 	}
 
 	instanceID := fmt.Sprintf("%s_%s_%s", instanceInfo.instanceIdent.ServiceID, instanceInfo.instanceIdent.SubjectID,
@@ -179,7 +179,7 @@ func TestGetServiceError(t *testing.T) {
 	messages = append(messages, message)
 
 	if err = waitAlerts(testSender.alertsChannel, 5*time.Second,
-		cloudprotocol.AlertTagServiceInstance, instanceInfo.instanceIdent, 0, messages); err != nil {
+		cloudprotocol.AlertTagServiceInstance, instanceInfo.instanceIdent, "1.0.0", messages); err != nil {
 		t.Errorf("Result failed: %s", err)
 	}
 }
@@ -210,7 +210,7 @@ func TestGetServiceManagerAlerts(t *testing.T) {
 	}
 
 	if err = waitAlerts(testSender.alertsChannel, 5*time.Second, cloudprotocol.AlertTagAosCore,
-		aostypes.InstanceIdent{}, 0, messages); err != nil {
+		aostypes.InstanceIdent{}, "1.0.0", messages); err != nil {
 		t.Errorf("Result failed: %s", err)
 	}
 }
@@ -246,14 +246,14 @@ func TestMessageFilter(t *testing.T) {
 
 	for i := 0; i < numMessages; i++ {
 		err := waitResult(testSender.alertsChannel, 1*time.Second,
-			func(alert cloudprotocol.AlertItem) (success bool, err error) {
-				if alert.Tag != cloudprotocol.AlertTagSystemError {
-					return false, aoserrors.New("wrong alert type")
-				}
-
-				systemAlert, ok := alert.Payload.(cloudprotocol.SystemAlert)
+			func(alert interface{}) (success bool, err error) {
+				systemAlert, ok := alert.(cloudprotocol.SystemAlert)
 				if !ok {
 					return false, aoserrors.New("wrong alert type content")
+				}
+
+				if systemAlert.Tag != cloudprotocol.AlertTagSystemError {
+					return false, aoserrors.New("wrong alert type")
 				}
 
 				if systemAlert.Message != validMessage {
@@ -337,13 +337,13 @@ matchLoop:
 
 func (instanceProvider *testInstanceProvider) GetInstanceInfoByID(
 	id string,
-) (ident aostypes.InstanceIdent, aosVersion uint64, err error) {
+) (ident aostypes.InstanceIdent, version string, err error) {
 	instance, ok := instanceProvider.instancesInfo[id]
 	if !ok {
-		return ident, aosVersion, aoserrors.New("Instance does not exist")
+		return ident, version, aoserrors.New("Instance does not exist")
 	}
 
-	return instance.instanceIdent, instance.aosVersion, nil
+	return instance.instanceIdent, instance.serviceVersion, nil
 }
 
 func (cursorStorage *testCursorStorage) SetJournalCursor(cursor string) (err error) {
@@ -438,7 +438,7 @@ func (journal *testSystemdJournal) addMessage(message, systemdUnit, cgroupUnit, 
 	journal.messages = append(journal.messages, &journalEntry)
 }
 
-func (sender *testSender) SendAlert(alert cloudprotocol.AlertItem) {
+func (sender *testSender) SendAlert(alert interface{}) {
 	sender.alertsChannel <- alert
 }
 
@@ -448,14 +448,14 @@ func (sender *testSender) SendAlert(alert cloudprotocol.AlertItem) {
 
 func newTestSender() (sender *testSender) {
 	sender = &testSender{
-		alertsChannel: make(chan cloudprotocol.AlertItem, 1),
+		alertsChannel: make(chan interface{}, 1),
 	}
 
 	return sender
 }
 
-func waitResult(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Duration,
-	checkAlert func(alert cloudprotocol.AlertItem) (success bool, err error),
+func waitResult(alertsChannel <-chan interface{}, timeout time.Duration,
+	checkAlert func(alert interface{}) (success bool, err error),
 ) (err error) {
 	for {
 		select {
@@ -475,44 +475,38 @@ func waitResult(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Durat
 	}
 }
 
-func waitAlerts(alertsChannel <-chan cloudprotocol.AlertItem, timeout time.Duration,
-	tag string, instance aostypes.InstanceIdent, version uint64, data []string,
+func waitAlerts(alertsChannel <-chan interface{}, timeout time.Duration,
+	tag string, instance aostypes.InstanceIdent, serviceVersion string, data []string,
 ) (err error) {
-	return waitResult(alertsChannel, timeout, func(alert cloudprotocol.AlertItem) (success bool, err error) {
-		if alert.Tag != tag {
-			return false, nil
-		}
-
+	return waitResult(alertsChannel, timeout, func(alert interface{}) (success bool, err error) {
 		for i, message := range data {
 			var alertMsg string
-			switch alert.Tag {
-			case cloudprotocol.AlertTagAosCore:
-				castedAlert, ok := alert.Payload.(cloudprotocol.CoreAlert)
-				if !ok {
+
+			switch alertItem := alert.(type) {
+			case cloudprotocol.CoreAlert:
+				if alertItem.Tag != tag {
 					return false, errIncorrectType
 				}
 
-				alertMsg = castedAlert.Message
+				alertMsg = alertItem.Message
 
-			case cloudprotocol.AlertTagServiceInstance:
-				castedAlert, ok := alert.Payload.(cloudprotocol.ServiceInstanceAlert)
-				if !ok {
+			case cloudprotocol.ServiceInstanceAlert:
+				if alertItem.Tag != tag {
 					return false, errIncorrectType
 				}
 
-				if castedAlert.InstanceIdent != instance || version != castedAlert.AosVersion {
+				if alertItem.InstanceIdent != instance || serviceVersion != alertItem.ServiceVersion {
 					continue
 				}
 
-				alertMsg = castedAlert.Message
+				alertMsg = alertItem.Message
 
-			case cloudprotocol.AlertTagSystemError:
-				castedAlert, ok := alert.Payload.(cloudprotocol.SystemAlert)
-				if !ok {
+			case cloudprotocol.SystemAlert:
+				if alertItem.Tag != tag {
 					return false, errIncorrectType
 				}
 
-				alertMsg = castedAlert.Message
+				alertMsg = alertItem.Message
 			}
 
 			if alertMsg == message {

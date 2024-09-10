@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// Copyright (C) 2021 Renesas Electronics Corporation.
-// Copyright (C) 2021 EPAM Systems, Inc.
+// Copyright (C) 2024 Renesas Electronics Corporation.
+// Copyright (C) 2024 EPAM Systems, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,49 +15,50 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cloudprotocol
+package resourcemonitor
 
-import "encoding/json"
-
-/***********************************************************************************************************************
- * Consts
- **********************************************************************************************************************/
-
-// ProtocolVersion specifies supported protocol version.
-const ProtocolVersion = 6
+import (
+	"math"
+)
 
 /***********************************************************************************************************************
- * Types
+ * Structs
  **********************************************************************************************************************/
 
-// ReceivedMessage structure for Aos incoming messages.
-type ReceivedMessage struct {
-	Header MessageHeader   `json:"header"`
-	Data   json.RawMessage `json:"data"`
+type averageCalc struct {
+	sum         float64
+	count       uint64
+	windowCount uint64
 }
 
-// Message structure for AOS messages.
-type Message struct {
-	Header MessageHeader `json:"header"`
-	Data   interface{}   `json:"data"`
+/***********************************************************************************************************************
+ * Private
+ **********************************************************************************************************************/
+
+func newAverageCalc(windowCount uint64) *averageCalc {
+	return &averageCalc{windowCount: windowCount}
 }
 
-// MessageHeader message header.
-type MessageHeader struct {
-	Version  uint64 `json:"version"`
-	SystemID string `json:"systemId"`
+func (calc *averageCalc) calculate(value float64) float64 {
+	if calc.count < calc.windowCount {
+		calc.sum += value
+		calc.count++
+	} else {
+		calc.sum -= calc.sum / float64(calc.count)
+		calc.sum += value
+	}
+
+	return calc.getValue()
 }
 
-// ErrorInfo error information.
-type ErrorInfo struct {
-	AosCode  int    `json:"aosCode"`
-	ExitCode int    `json:"exitCode"`
-	Message  string `json:"message,omitempty"`
+func (calc *averageCalc) getValue() float64 {
+	if calc.count == 0 {
+		return 0
+	}
+
+	return calc.sum / float64(calc.count)
 }
 
-// InstanceFilter instance filter structure.
-type InstanceFilter struct {
-	ServiceID *string `json:"serviceId,omitempty"`
-	SubjectID *string `json:"subjectId,omitempty"`
-	Instance  *uint64 `json:"instance,omitempty"`
+func (calc *averageCalc) getIntValue() uint64 {
+	return uint64(math.Round(calc.getValue()))
 }

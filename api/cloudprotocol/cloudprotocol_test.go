@@ -96,3 +96,37 @@ func TestNewInstanceFilter(t *testing.T) {
 		}
 	}
 }
+
+func TestNodeInfoAttrs(t *testing.T) {
+	nodeInfo := cloudprotocol.NodeInfo{
+		Attrs: map[string]interface{}{
+			cloudprotocol.NodeAttrMainNode:      "",
+			cloudprotocol.NodeAttrAosComponents: "iam, sm, um",
+			cloudprotocol.NodeAttrRunners:       "runc, crun",
+		},
+	}
+
+	if !nodeInfo.IsMainNode() {
+		t.Error("Incorrect main node")
+	}
+
+	aosComponents, err := nodeInfo.GetAosComponents()
+	if err != nil {
+		t.Fatalf("Failed to get AOS components: %v", err)
+	}
+
+	if !reflect.DeepEqual(aosComponents, []string{
+		cloudprotocol.AosComponentIAM, cloudprotocol.AosComponentSM, cloudprotocol.AosComponentUM,
+	}) {
+		t.Error("Incorrect AOS components")
+	}
+
+	runners, err := nodeInfo.GetNodeRunners()
+	if err != nil {
+		t.Fatalf("Failed to get runners: %v", err)
+	}
+
+	if !reflect.DeepEqual(runners, []string{"runc", "crun"}) {
+		t.Error("Incorrect runners")
+	}
+}
