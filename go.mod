@@ -12,6 +12,7 @@ require (
 	github.com/cavaliergopher/grab/v3 v3.0.1
 	github.com/coreos/go-systemd/v22 v22.5.0
 	github.com/golang-migrate/migrate/v4 v4.16.2
+	github.com/golang/protobuf v1.5.3
 	github.com/google/go-tpm v0.9.0
 	github.com/google/uuid v1.4.0
 	github.com/gorilla/websocket v1.5.1
@@ -31,7 +32,6 @@ require (
 
 require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
-	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/miekg/pkcs11 v1.0.3-0.20190429190417-a667d056470f // indirect
