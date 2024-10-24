@@ -1034,12 +1034,9 @@ func (client *Client) reconnect() {
 			return
 
 		case <-timer.C:
-			client.Lock()
 			client.closeGRPCConnection()
-			err := client.openGRPCConnection()
-			client.Unlock()
 
-			if err != nil {
+			if err := client.openGRPCConnection(); err != nil {
 				log.WithField("err", err).Error("Reconnection to IAM failed")
 
 				timer.Reset(iamReconnectInterval)
