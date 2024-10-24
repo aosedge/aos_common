@@ -1049,7 +1049,9 @@ func (server *testPublicServer) GetSystemInfo(
 }
 
 func (server *testPublicServer) GetNodeInfo(context context.Context, req *empty.Empty) (*pb.NodeInfo, error) {
-	return &pb.NodeInfo{}, nil
+	return &pb.NodeInfo{Attrs: []*pb.NodeAttribute{
+		{Name: cloudprotocol.NodeAttrMainNode},
+	}}, nil
 }
 
 func (server *testIAMPublicIdentityServiceServer) GetSystemInfo(
