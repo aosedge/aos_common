@@ -863,7 +863,7 @@ func newTestServer(
 	}
 
 	server.testPublicServer.grpcServer = grpc.NewServer()
-	server.testPublicServer.nodeInfo = make(chan *pb.NodeInfo)
+	server.testPublicServer.nodeInfo = make(chan *pb.NodeInfo, 1)
 	server.testPublicServer.certInfoChan = make(chan *pb.CertInfo, 1)
 	server.testPublicServer.currentSubjects = []string{"initial1", "initial2"}
 	server.testPublicServer.subjects = make(chan *pb.Subjects)
@@ -1049,7 +1049,9 @@ func (server *testPublicServer) GetSystemInfo(
 }
 
 func (server *testPublicServer) GetNodeInfo(context context.Context, req *empty.Empty) (*pb.NodeInfo, error) {
-	return &pb.NodeInfo{}, nil
+	return &pb.NodeInfo{Attrs: []*pb.NodeAttribute{
+		{Name: cloudprotocol.NodeAttrMainNode},
+	}}, nil
 }
 
 func (server *testIAMPublicIdentityServiceServer) GetSystemInfo(
