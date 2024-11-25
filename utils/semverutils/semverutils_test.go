@@ -96,15 +96,49 @@ func TestGreaterThan(t *testing.T) {
 	}
 }
 
+func TestCompare(t *testing.T) {
+	successCases := []struct {
+		version1       string
+		version2       string
+		expectedResult int
+	}{
+		{"1.9", "1.10", -1},
+		{"1.5", "1.3", 1},
+		{"1.3", "1.3", 0},
+	}
+
+	for _, testcase := range successCases {
+		testName := fmt.Sprintf("semverutils.Compare(%s, %s)", testcase.version1, testcase.version2)
+
+		res, err := semverutils.Compare(testcase.version1, testcase.version2)
+		checkSuccess(t, res, testcase.expectedResult, err, testName)
+	}
+
+	errorCases := []struct {
+		version1 string
+		version2 string
+	}{
+		{"1.x", "1.3"},
+		{"1.y", "1.x"},
+	}
+
+	for _, testcase := range errorCases {
+		testName := fmt.Sprintf("semverutils.GreaterThan(%s, %s)", testcase.version1, testcase.version2)
+
+		_, err := semverutils.GreaterThan(testcase.version1, testcase.version2)
+		checkFailure(t, err, testName)
+	}
+}
+
 /***********************************************************************************************************************
  * Private
  **********************************************************************************************************************/
 
-func checkSuccess(t *testing.T, actual, expected bool, err error, name string) {
+func checkSuccess(t *testing.T, actual, expected interface{}, err error, name string) {
 	t.Helper()
 
 	if actual != expected {
-		t.Errorf("Wrong result for %s: actual=%t expected=%t", name, actual, expected)
+		t.Errorf("Wrong result for %s: actual=%v expected=%v", name, actual, expected)
 	}
 
 	if err != nil {
