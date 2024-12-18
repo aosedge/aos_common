@@ -20,13 +20,14 @@ package iamclient
 import (
 	"context"
 	"encoding/base64"
+	"slices"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
 	"github.com/golang/protobuf/ptypes/empty"
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/emptypb"
 
@@ -321,20 +322,28 @@ func (client *Client) InstallCertificates(
 	// IAM cert type of secondary nodes should be sent the latest among certificates for that node.
 	// And IAM certificate for the main node should be send in the end. Otherwise IAM client/server
 	// restart will fail the following certificates to apply.
-	slices.SortStableFunc(certInfo, func(a, b cloudprotocol.IssuedCertData) bool {
-		if a.NodeID == b.NodeID {
-			return b.Type == iamCertType
-		}
-
+	slices.SortStableFunc(certInfo, func(a, b cloudprotocol.IssuedCertData) int {
 		if a.NodeID == client.nodeID && a.Type == iamCertType {
-			return false
+			return 1
 		}
 
 		if b.NodeID == client.nodeID && b.Type == iamCertType {
-			return true
+			return -1
 		}
 
-		return false
+		if a.NodeID == b.NodeID {
+			if a.Type == iamCertType {
+				return 1
+			}
+
+			if b.Type == iamCertType {
+				return -1
+			}
+
+			return 0
+		}
+
+		return strings.Compare(a.NodeID, b.NodeID)
 	})
 
 	for i, cert := range certInfo {

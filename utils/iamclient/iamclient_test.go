@@ -306,7 +306,7 @@ KzpDMr/kcScwzmmNcN8aLp31TSRVee64QrK7yF3YJxL+rA==
 	}
 	defer client.Close()
 
-	expectedConfimation := []cloudprotocol.InstallCertData{
+	expectedConfirmation := []cloudprotocol.InstallCertData{
 		{Type: "online", Serial: "", Status: "installed"},
 		{Type: "offline", Serial: "", Status: "installed"},
 		{Type: "invalid", Serial: "", Status: "not installed", Description: "error"},
@@ -322,8 +322,8 @@ KzpDMr/kcScwzmmNcN8aLp31TSRVee64QrK7yF3YJxL+rA==
 		t.Fatalf("Can't process install certificates request: %v", err)
 	}
 
-	if !reflect.DeepEqual(expectedConfimation, sender.currentConfirmations) {
-		log.Debug(expectedConfimation)
+	if !reflect.DeepEqual(expectedConfirmation, sender.currentConfirmations) {
+		log.Debug(expectedConfirmation)
 		log.Debug(sender.currentConfirmations)
 		t.Error("Wrong install confirmation")
 	}
