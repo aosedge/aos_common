@@ -63,7 +63,7 @@ func TestStartServer(t *testing.T) {
 	service := testIAMServer{}
 	testServer.RegisterService(&pb.IAMPublicService_ServiceDesc, service)
 
-	if err := callGetNodeInfo(clientOpt, grpc.WithBlock()); err == nil {
+	if err := callGetNodeInfo(clientOpt); err == nil {
 		t.Fatalf("Server not started, GetNodeInfo call should return error")
 	}
 
@@ -72,7 +72,7 @@ func TestStartServer(t *testing.T) {
 		t.Fatalf("Server not started: err=%v", err)
 	}
 
-	if err := callGetNodeInfo(clientOpt, grpc.WithBlock()); err != nil {
+	if err := callGetNodeInfo(clientOpt); err != nil {
 		t.Fatalf("Server started, GetNodeInfo call should succeed: err=%v", err)
 	}
 }
@@ -123,14 +123,14 @@ func TestUpdateOptions(t *testing.T) {
  **********************************************************************************************************************/
 
 func callGetNodeInfo(dialOpts ...grpc.DialOption) error {
-	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
-	defer cancel()
-
-	connection, err := grpc.DialContext(ctx, testURL, dialOpts...)
+	connection, err := grpc.NewClient(testURL, dialOpts...)
 	if err != nil {
 		return aoserrors.Wrap(err)
 	}
 	defer connection.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), testTimeout)
+	defer cancel()
 
 	service := pb.NewIAMPublicServiceClient(connection)
 	_, err = service.GetNodeInfo(ctx, &empty.Empty{})

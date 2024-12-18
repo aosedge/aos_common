@@ -826,7 +826,7 @@ func (client *Client) openGRPCConnection() (err error) {
 	var publicConn *grpc.ClientConn
 
 	publicConn, err = grpchelpers.CreatePublicConnection(
-		client.publicURL, iamRequestTimeout, client.cryptocontext, client.insecure)
+		client.publicURL, client.cryptocontext, client.insecure)
 	if err != nil {
 		return aoserrors.Wrap(err)
 	}
@@ -871,7 +871,7 @@ func (client *Client) openGRPCConnection() (err error) {
 	}
 
 	client.protectedConnection, err = grpchelpers.CreateProtectedConnection(client.certStorage,
-		client.protectedURL, iamRequestTimeout, client.cryptocontext, client, client.insecure)
+		client.protectedURL, client.cryptocontext, client, client.insecure)
 	if err != nil {
 		return aoserrors.Wrap(err)
 	}
