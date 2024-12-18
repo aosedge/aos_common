@@ -1095,8 +1095,6 @@ func (server *testIAMPublicNodesServiceServer) GetNodeInfo(context context.Conte
 func (server *testIAMPublicNodesServiceServer) SubscribeNodeChanged(
 	empty *emptypb.Empty, stream pb.IAMPublicNodesService_SubscribeNodeChangedServer,
 ) error {
-	log.Error("testIAMPublicNodesServiceServer SubscribeNodeChanged")
-
 	nodeInfo := <-server.nodeInfo
 
 	return aoserrors.Wrap(stream.Send(nodeInfo))
