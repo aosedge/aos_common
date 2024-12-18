@@ -39,7 +39,7 @@ func TestStoppedConnectionFails(t *testing.T) {
 	testServer := startTestServer(testURL)
 
 	// Create connection & check RPC call succeeds
-	grpcConn, err := NewGRPCConn(testURL, testTimeout)
+	grpcConn, err := NewGRPCConn(testURL)
 	if err != nil {
 		t.Fatalf("Connection failed: err=%v", err)
 	}
@@ -69,7 +69,7 @@ func TestRPCBlockedUntilConnectionReset(t *testing.T) {
 	defer testServer.StopServer()
 
 	// Create connection & check RPC call succeeds
-	grpcConn, err := NewGRPCConn(testURL, testTimeout)
+	grpcConn, err := NewGRPCConn(testURL)
 	if err != nil {
 		t.Fatalf("Connection failed: err=%v", err)
 	}
@@ -106,7 +106,7 @@ func TestRPCBlockedUntilConnectionReset(t *testing.T) {
 		t.Fatalf("Connection failed: err=%v", err)
 	}
 
-	grpcConn, err = NewGRPCConn(testURL, testTimeout)
+	grpcConn, err = NewGRPCConn(testURL)
 	if err != nil {
 		t.Fatalf("Connection failed: err=%v", err)
 	}
@@ -124,13 +124,10 @@ func TestRPCBlockedUntilConnectionReset(t *testing.T) {
  * Utils
  **********************************************************************************************************************/
 
-func NewGRPCConn(address string, timeout time.Duration) (*grpc.ClientConn, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
+func NewGRPCConn(address string) (*grpc.ClientConn, error) {
 	cred := grpc.WithTransportCredentials(insecure.NewCredentials())
 
-	grpcConn, err := grpc.DialContext(ctx, address, cred, grpc.WithBlock())
+	grpcConn, err := grpc.NewClient(address, cred)
 	if err != nil {
 		return nil, aoserrors.Wrap(err)
 	}
