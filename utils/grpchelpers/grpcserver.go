@@ -120,7 +120,7 @@ func (server *GRPCServer) StopServer() {
 
 func (server *GRPCServer) stopGRPCServer() {
 	if server.grpcServer != nil {
-		server.grpcServer.GracefulStop()
+		server.grpcServer.Stop()
 	}
 
 	server.stopWG.Wait()
