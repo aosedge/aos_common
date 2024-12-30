@@ -202,7 +202,7 @@ func TestSystemAlerts(t *testing.T) {
 					MinThreshold: 80,
 					MaxThreshold: 90,
 				},
-				UsedDisks: []aostypes.PartitionAlertRule{
+				Partitions: []aostypes.PartitionAlertRule{
 					{
 						AlertRulePercents: aostypes.AlertRulePercents{
 							MinTimeout:   aostypes.Duration{},
@@ -242,11 +242,11 @@ func TestSystemAlerts(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					CPU:      3500,
-					RAM:      1100,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
-					Download: 150,
-					Upload:   150,
+					CPU:        3500,
+					RAM:        1100,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Download:   150,
+					Upload:     150,
 				},
 			},
 			usageData: testUsageData{
@@ -262,11 +262,11 @@ func TestSystemAlerts(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					RAM:      1100,
-					CPU:      10000,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
-					Download: 150,
-					Upload:   250,
+					RAM:        1100,
+					CPU:        10000,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2300}},
+					Download:   150,
+					Upload:     250,
 				},
 			},
 			usageData: testUsageData{
@@ -285,11 +285,11 @@ func TestSystemAlerts(t *testing.T) {
 			},
 			monitoringData: aostypes.NodeMonitoring{
 				NodeData: aostypes.MonitoringData{
-					CPU:      10000,
-					RAM:      10000,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 10000}},
-					Download: 350,
-					Upload:   250,
+					CPU:        10000,
+					RAM:        10000,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 10000}},
+					Download:   350,
+					Upload:     250,
 				},
 			},
 			usageData: testUsageData{
@@ -411,7 +411,7 @@ func TestInstances(t *testing.T) {
 						MinThreshold: 80,
 						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRule{
+					Partitions: []aostypes.PartitionAlertRule{
 						{
 							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
@@ -445,7 +445,7 @@ func TestInstances(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							RAM: 1100,
 							CPU: 3500,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
 							Download: 150,
@@ -486,7 +486,7 @@ func TestInstances(t *testing.T) {
 						MinThreshold: 80,
 						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRule{
+					Partitions: []aostypes.PartitionAlertRule{
 						{
 							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
@@ -520,7 +520,7 @@ func TestInstances(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							CPU: 2500,
 							RAM: 9000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.LayersPartition, UsedSize: 2300},
 							},
 							Download: 250,
@@ -573,7 +573,7 @@ func TestInstances(t *testing.T) {
 						MinThreshold: 80,
 						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRule{
+					Partitions: []aostypes.PartitionAlertRule{
 						{
 							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
@@ -607,7 +607,7 @@ func TestInstances(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							CPU: 9000,
 							RAM: 9000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2300},
 							},
 							Download: 150,
@@ -665,7 +665,7 @@ func TestInstances(t *testing.T) {
 						MinThreshold: 80,
 						MaxThreshold: 90,
 					},
-					UsedDisks: []aostypes.PartitionAlertRule{
+					Partitions: []aostypes.PartitionAlertRule{
 						{
 							AlertRulePercents: aostypes.AlertRulePercents{
 								MinTimeout:   aostypes.Duration{},
@@ -699,7 +699,7 @@ func TestInstances(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							CPU: 9000,
 							RAM: 9000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.StatesPartition, UsedSize: 2300},
 							},
 							Download: 150,
@@ -844,11 +844,11 @@ func TestSystemAveraging(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					CPU:      1000,
-					RAM:      1000,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
-					Download: 100,
-					Upload:   200,
+					CPU:        1000,
+					RAM:        1000,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 2000}},
+					Download:   100,
+					Upload:     200,
 				},
 			},
 		},
@@ -860,11 +860,11 @@ func TestSystemAveraging(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					CPU:      1500,
-					RAM:      1500,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
-					Download: 150,
-					Upload:   250,
+					CPU:        1500,
+					RAM:        1500,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 3000}},
+					Download:   150,
+					Upload:     250,
 				},
 			},
 		},
@@ -876,11 +876,11 @@ func TestSystemAveraging(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					CPU:      2000,
-					RAM:      2000,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
-					Download: 200,
-					Upload:   300,
+					CPU:        2000,
+					RAM:        2000,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Download:   200,
+					Upload:     300,
 				},
 			},
 		},
@@ -892,11 +892,11 @@ func TestSystemAveraging(t *testing.T) {
 			monitoringData: aostypes.NodeMonitoring{
 				NodeID: "testNode",
 				NodeData: aostypes.MonitoringData{
-					CPU:      2000,
-					RAM:      2000,
-					Disk:     []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
-					Download: 300,
-					Upload:   400,
+					CPU:        2000,
+					RAM:        2000,
+					Partitions: []aostypes.PartitionUsage{{Name: cloudprotocol.GenericPartition, UsedSize: 4000}},
+					Download:   300,
+					Upload:     400,
 				},
 			},
 		},
@@ -998,7 +998,7 @@ func TestInstanceAveraging(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							RAM: 1000,
 							CPU: 1000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2000},
 							},
 							Download: 100,
@@ -1039,7 +1039,7 @@ func TestInstanceAveraging(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							RAM: 1500,
 							CPU: 1500,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 2500},
 							},
 							Download: 150,
@@ -1080,7 +1080,7 @@ func TestInstanceAveraging(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							RAM: 2000,
 							CPU: 2000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
 							},
 							Download: 200,
@@ -1121,7 +1121,7 @@ func TestInstanceAveraging(t *testing.T) {
 						MonitoringData: aostypes.MonitoringData{
 							RAM: 2000,
 							CPU: 2000,
-							Disk: []aostypes.PartitionUsage{
+							Partitions: []aostypes.PartitionUsage{
 								{Name: cloudprotocol.ServicesPartition, UsedSize: 3000},
 							},
 							Download: 200,

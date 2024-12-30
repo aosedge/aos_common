@@ -18,17 +18,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Code checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Go
-        uses: actions/setup-go@v4
+        uses: actions/setup-go@v5
         with:
-          go-version: "1.20"
+          go-version: "1.22"
 
       - name: Test
         run: |
           sudo apt-get update
-          sudo apt-get install -y libblkid-dev parted dosfstools libsystemd-dev
+          sudo apt-get install -y libblkid-dev parted dosfstools libsystemd-dev util-linux
           sudo env "PATH=$PATH" go test -v ./... -failfast -coverprofile=coverage.out -covermode=atomic
           sudo chmod 666 coverage.out
 
@@ -38,4 +38,4 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: "v1.59"
+          version: "v1.62"
