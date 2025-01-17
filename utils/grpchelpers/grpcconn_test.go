@@ -46,9 +46,8 @@ func TestStoppedConnectionFails(t *testing.T) {
 
 	conn := grpchelpers.NewGRPCConn()
 
-	if err := conn.Start(grpcConn); err != nil {
-		t.Fatalf("Blocking connection start failed: err=%v", err)
-	}
+	conn.Set(grpcConn)
+	conn.Start()
 
 	if err := getNodeInfo(conn); err != nil {
 		t.Fatalf("Server started, GetNodeInfo call should succeed: err=%v", err)
@@ -76,9 +75,8 @@ func TestRPCBlockedUntilConnectionReset(t *testing.T) {
 
 	conn := grpchelpers.NewGRPCConn()
 
-	if err := conn.Start(grpcConn); err != nil {
-		t.Fatalf("Blocking connection start failed: err=%v", err)
-	}
+	conn.Set(grpcConn)
+	conn.Start()
 
 	if err := getNodeInfo(conn); err != nil {
 		t.Fatalf("GetNodeInfo call should succeed: err=%v", err)
@@ -111,9 +109,8 @@ func TestRPCBlockedUntilConnectionReset(t *testing.T) {
 		t.Fatalf("Connection failed: err=%v", err)
 	}
 
-	if err := conn.Start(grpcConn); err != nil {
-		t.Fatalf("Blocking connection start failed: err=%v", err)
-	}
+	conn.Set(grpcConn)
+	conn.Start()
 
 	if err := <-rpcResultChan; err != nil {
 		t.Fatalf("GetNodeInfo call should succeed: err=%v", err)
