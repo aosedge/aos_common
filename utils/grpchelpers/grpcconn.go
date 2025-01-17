@@ -125,31 +125,8 @@ func (conn *GRPCConn) Invoke(ctx context.Context, method string, args any, reply
 	}
 }
 
-// NewStream begins a streaming RPC.
 func (conn *GRPCConn) NewStream(ctx context.Context, desc *grpc.StreamDesc, method string,
 	opts ...grpc.CallOption,
 ) (grpc.ClientStream, error) {
-	lock := make(chan struct{}, 1)
-
-	go func() {
-		conn.connStarted.Wait()
-		lock <- struct{}{}
-	}()
-
-	select {
-	case <-lock:
-		conn.Lock()
-		defer conn.Unlock()
-
-		if conn.grpcConn == nil {
-			return nil, aoserrors.New("grpc connection closed")
-		}
-
-		stream, err := conn.grpcConn.NewStream(ctx, desc, method, opts...)
-
-		return stream, aoserrors.Wrap(err)
-
-	case <-ctx.Done():
-		return nil, aoserrors.New("grpc context closed")
-	}
+	return conn.grpcConn.NewStream(ctx, desc, method, opts...)
 }
