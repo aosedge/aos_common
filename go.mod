@@ -24,7 +24,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
-	golang.org/x/crypto v0.31.0
+	golang.org/x/crypto v0.33.0
 	google.golang.org/grpc v1.69.0
 	google.golang.org/protobuf v1.36.0
 )
@@ -43,7 +43,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/net v0.30.0 // indirect
-	golang.org/x/sys v0.28.0 // indirect
-	golang.org/x/text v0.21.0 // indirect
+	golang.org/x/sys v0.30.0 // indirect
+	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20241015192408-796eee8c2d53 // indirect
 )
