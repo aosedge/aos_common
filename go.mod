@@ -1,6 +1,7 @@
 module github.com/aosedge/aos_common
 
 go 1.22.0
+toolchain go1.24.1
 
 replace github.com/ThalesIgnite/crypto11 => github.com/aosedge/crypto11 v1.0.3-0.20220217163524-ddd0ace39e6f
 
@@ -24,7 +25,7 @@ require (
 	github.com/shirou/gopsutil v3.21.11+incompatible
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stefanberger/go-pkcs11uri v0.0.0-20230803200340-78284954bff6
-	golang.org/x/crypto v0.33.0
+	golang.org/x/crypto v0.35.0
 	google.golang.org/grpc v1.69.0
 	google.golang.org/protobuf v1.36.0
 )
